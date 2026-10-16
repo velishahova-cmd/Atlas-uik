@@ -1,0 +1,892 @@
+<title>Атлас УИК Москвы</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control strip on top, map + inspector side by side, analytic charts in a 2-column band below.
+   Dense, instrument-like. Light theme is cool graphite paper; dark theme is a darkroom slate. */
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --surface-2:#f5f6f8; --line:#d6dae0; --line-soft:#e6e9ed;
+  --fg:#15181d; --fg-2:#4d5560; --fg-3:#7d8591;
+  --kprf:#c8313c; --kprf-ink:#a01d2b;
+  --g33:#2a78d6; --g34:#eb6834;
+  --seq1:#fbe3e0; --seq2:#f6bdb7; --seq3:#ec918d; --seq4:#dc6065; --seq5:#c8313c; --seq6:#9b1d2b; --seq7:#6e111f;
+  --div-neg:#2a78d6; --div-mid:#cfd2d6; --div-pos:#c8313c;
+  --sel:#15181d; --focus:#2a78d6;
+  --font-display:"Unbounded",system-ui,sans-serif;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --radius:6px; --shadow:0 1px 2px rgba(20,24,30,.06),0 6px 20px -12px rgba(20,24,30,.18);
+  --deg-fill:color-mix(in srgb,var(--kprf) 28%,var(--surface));
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161a; --surface:#1c1f24; --surface-2:#22262c; --line:#333942; --line-soft:#2a2f36;
+    --fg:#eceef1; --fg-2:#b6bcc5; --fg-3:#838b96;
+    --kprf:#e24f5c; --kprf-ink:#f08791;
+    --g33:#3987e5; --g34:#d95926;
+    --seq1:#3a2426; --seq2:#5c2a2f; --seq3:#7f3038; --seq4:#a33842; --seq5:#c8444f; --seq6:#e06b74; --seq7:#f3a0a6;
+    --div-neg:#3987e5; --div-mid:#3b4149; --div-pos:#e24f5c;
+    --sel:#ffffff; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161a; --surface:#1c1f24; --surface-2:#22262c; --line:#333942; --line-soft:#2a2f36;
+  --fg:#eceef1; --fg-2:#b6bcc5; --fg-3:#838b96;
+  --kprf:#e24f5c; --kprf-ink:#f08791;
+  --g33:#3987e5; --g34:#d95926;
+  --seq1:#3a2426; --seq2:#5c2a2f; --seq3:#7f3038; --seq4:#a33842; --seq5:#c8444f; --seq6:#e06b74; --seq7:#f3a0a6;
+  --div-neg:#3987e5; --div-mid:#3b4149; --div-pos:#e24f5c;
+  --sel:#ffffff; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 var(--font-body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1480px;margin:0 auto;padding-block:18px 40px;padding-inline:16px}
+h1,h2,h3{margin:0;text-wrap:balance}
+a{color:inherit}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3);font-weight:500}
+
+/* header */
+.head{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.head h1{font-family:var(--font-display);font-weight:700;font-size:clamp(22px,3vw,34px);line-height:1.1;letter-spacing:-.01em}
+.head .sub{color:var(--fg-2);margin-top:6px;max-width:68ch}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px}
+.ctl{display:flex;flex-direction:column;gap:5px}
+.ctl label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);font-weight:500}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface-2)}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;color:var(--fg-2);border-right:1px solid var(--line);font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg button .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.seg button[aria-pressed="true"] .dot{outline:2px solid var(--bg);outline-offset:-1px}
+select{border:1px solid var(--line);border-radius:var(--radius);padding:6px 30px 6px 10px;background:var(--surface-2);min-width:220px;appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+.search{display:flex;gap:6px}
+.search input{border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--surface-2);width:150px}
+.search button{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);padding:6px 12px;cursor:pointer;font-weight:500}
+.search button:hover{background:var(--line-soft)}
+.ctl.grow{flex:1 1 auto}
+.hint{font-size:12px;color:var(--fg-3);align-self:center;margin-left:auto;max-width:36ch;line-height:1.35}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px 11px;min-width:0}
+.kpi .v{font-size:27px;font-weight:600;line-height:1.1;margin-top:6px;letter-spacing:-.015em;font-variant-numeric:lining-nums proportional-nums}
+.kpi .v small{font-size:13px;font-weight:400;color:var(--fg-3);margin-left:5px;letter-spacing:0}
+.kpi .d{font-size:12px;color:var(--fg-2);margin-top:5px;line-height:1.35}
+.kpi.k-red .v{color:var(--kprf)}
+
+/* map + inspector */
+.main{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,.85fr);gap:14px;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;padding:12px 14px 0}
+.card-h h2{font-size:15px;font-weight:600}
+.card-h .note{font-size:12px;color:var(--fg-3)}
+.mapbox{position:relative;height:640px}
+.mapbox svg{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.mapbox svg:active{cursor:grabbing}
+.region{stroke:var(--surface);stroke-width:.6;transition:fill .25s;vector-effect:non-scaling-stroke}
+.region:hover{stroke:var(--fg);stroke-width:1.2}
+.region.selected{stroke:var(--sel);stroke-width:2}
+.region.dim{opacity:.25}
+.okrug-line{fill:none;stroke:var(--fg);stroke-width:1.1;pointer-events:none;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.okrug-label{font:600 11px var(--font-body);fill:var(--fg);pointer-events:none;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+/* points layer: neutral district canvas, dots carry the winner */
+svg.pmode .region{stroke:var(--line);stroke-width:.5}
+svg.pmode .region:hover{stroke:var(--fg-2);stroke-width:1}
+svg.pmode .region.selected{stroke:var(--sel);stroke-width:1.6}
+svg.pmode .okrug-line{stroke:var(--fg-2);stroke-width:.9}
+svg.pmode .okrug-label{opacity:.6}
+.udot{cursor:pointer}
+.udot.off{pointer-events:none}
+.ctl[hidden]{display:none}
+.lg-rows{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.lg-row{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.lg-row b{font-weight:500;font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--fg);margin-left:auto;padding-left:10px}
+.lg-row small{color:var(--fg-3)}
+.lg-sw{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.lg-sw.tie{background:linear-gradient(90deg,var(--kprf) 50%,var(--fg-3) 50%)}
+.lg-keys{margin-top:6px;line-height:1.4}
+.legend{position:absolute;left:12px;bottom:12px;background:color-mix(in srgb,var(--surface) 88%,transparent);border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--fg-2);backdrop-filter:blur(6px);max-width:min(300px,calc(100% - 24px))}
+.legend .ramp{display:flex;height:9px;border-radius:3px;overflow:hidden;margin:6px 0 3px}
+.legend .ramp span{flex:1}
+.legend .ticks{display:flex;justify-content:space-between;font-family:var(--font-mono);color:var(--fg-3)}
+.legend .t{font-weight:600;color:var(--fg)}
+.map-tools{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.map-tools button{width:30px;height:30px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-weight:600;color:var(--fg-2);box-shadow:var(--shadow)}
+.map-tools button:hover{color:var(--fg)}
+.tip{position:fixed;pointer-events:none;z-index:50;background:var(--fg);color:var(--bg);padding:7px 10px;border-radius:5px;font-size:12px;line-height:1.4;max-width:260px;box-shadow:0 6px 24px -8px rgba(0,0,0,.4);opacity:0;transition:opacity .12s}
+.tip b{font-weight:600}
+.tip .row{display:flex;justify-content:space-between;gap:14px}
+.tip .row span:last-child{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* inspector */
+.insp{display:flex;flex-direction:column;max-height:640px}
+.insp-h{padding:12px 14px 10px;border-bottom:1px solid var(--line-soft)}
+.insp-h .title{font-family:var(--font-display);font-weight:500;font-size:17px;line-height:1.2;letter-spacing:-.01em}
+.insp-h .crumbs{font-size:12px;color:var(--fg-2);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.gchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--fg-2)}
+.gchip i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.insp-h .clear{float:right;border:0;background:transparent;color:var(--fg-3);cursor:pointer;font-size:12px;padding:2px 4px}
+.insp-h .clear:hover{color:var(--fg)}
+.insp-b{overflow:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.fact .l{font-size:11px;color:var(--fg-3);letter-spacing:.04em;text-transform:uppercase}
+.fact .v{font-size:19px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:lining-nums proportional-nums;margin-top:1px}
+.fact .v small{font-size:11px;color:var(--fg-3);font-family:var(--font-body);margin-left:3px}
+.fact .v.pos{color:var(--kprf)}
+.fact .v.neg{color:var(--div-neg)}
+.sect{font-size:12px;font-weight:600;color:var(--fg-2);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline}
+.sect .note{font-weight:400;color:var(--fg-3);font-size:11px}
+.pbars{display:flex;flex-direction:column;gap:4px}
+.pbar{display:grid;grid-template-columns:118px 1fr 52px;gap:8px;align-items:center;font-size:12px}
+.pbar .n{color:var(--fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbar .bar{height:9px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.pbar .bar i{display:block;height:100%;background:var(--fg-3);border-radius:2px}
+.pbar.kprf .bar i{background:var(--kprf)}
+.pbar.kprf .n{color:var(--fg);font-weight:600}
+.pbar .v{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--fg-2)}
+.pbar.kprf .v{color:var(--fg)}
+table.uik{width:100%;border-collapse:collapse;font-size:12px}
+table.uik th{position:sticky;top:0;background:var(--surface);text-align:right;font-weight:500;color:var(--fg-3);padding:5px 6px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;white-space:nowrap;font-size:11px}
+table.uik th:first-child,table.uik td:first-child{text-align:left}
+table.uik th[aria-sort="ascending"]::after{content:" ↑"}
+table.uik th[aria-sort="descending"]::after{content:" ↓"}
+table.uik td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line-soft);font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.uik td:first-child{font-family:var(--font-body)}
+table.uik tr.below td.kv{color:var(--div-neg)}
+table.uik tr.above td.kv{color:var(--kprf)}
+table.uik tr.hit td{background:color-mix(in srgb,var(--kprf) 14%,transparent)}
+table.uik tr.anom td:first-child::after{content:"";display:inline-block;width:5px;height:5px;border:1.5px solid var(--fg);border-radius:50%;margin-left:5px;vertical-align:1px}
+table.uik td .d{font-family:var(--font-body);color:var(--fg-3);font-size:11px;display:block;text-align:left;white-space:normal;line-height:1.25}
+.tscroll{overflow:auto;max-height:290px;border:1px solid var(--line-soft);border-radius:4px}
+.anoms{display:flex;flex-direction:column;gap:6px}
+.anom{border-left:3px solid var(--fg-3);padding:5px 10px;background:var(--surface-2);border-radius:0 4px 4px 0;font-size:12px;line-height:1.4}
+.anom b{font-weight:600}
+.anom .why{color:var(--fg-2)}
+.empty{color:var(--fg-3);font-size:12px}
+.notice{font-size:12px;color:var(--fg-2);background:var(--surface-2);border-radius:4px;padding:8px 10px;line-height:1.4}
+
+/* charts band */
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px;align-items:start}
+.card-h + .chart{padding-top:10px}
+.chart{padding:0 14px 14px}
+.chart svg{width:100%;display:block;overflow:visible}
+.chart .axis text{fill:var(--fg-3);font-family:var(--font-mono);font-size:10.5px}
+.chart .axis line,.chart .axis path{stroke:var(--line);shape-rendering:crispEdges}
+.chart .axis .domain{display:none}
+.chart .grid line{stroke:var(--line-soft);shape-rendering:crispEdges}
+.chart .lbl{fill:var(--fg-2);font-size:11.5px}
+.chart .lbl.strong{fill:var(--fg);font-weight:600}
+.chart .val{fill:var(--fg-2);font-family:var(--font-mono);font-size:10.5px}
+.chart .mean{stroke:var(--fg);stroke-width:1.2;stroke-dasharray:3 3}
+.chart .mean-l{fill:var(--fg);font-size:11px;font-weight:600;paint-order:stroke;stroke:var(--surface);stroke-width:3px}
+.chart .zero{stroke:var(--fg-3);stroke-width:1}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--fg-2);padding:8px 14px 2px}
+.leg span{display:inline-flex;align-items:center;gap:6px}
+.leg i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.leg i.ring{background:transparent;border:2px solid var(--fg)}
+.leg i.sq{border-radius:2px}
+.dot{cursor:pointer}
+.dot.anom{stroke:var(--fg);stroke-width:1.5}
+.rank-row{cursor:pointer}
+.rank-row:hover rect{filter:brightness(.85)}
+.rank-row.sel .lbl{fill:var(--fg);font-weight:600}
+
+.foot{font-size:12px;color:var(--fg-3);line-height:1.55;max-width:90ch}
+.foot p{margin:4px 0}
+
+@media (max-width:980px){
+  .main{grid-template-columns:1fr}
+  .mapbox{height:480px}
+  .insp{max-height:none}
+  .charts{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .kpis{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi{padding:8px 10px 9px}
+  .kpi:last-child:nth-child(odd){grid-column:1/-1}
+  .kpi .v{font-size:22px}
+  .kpi .d{font-size:11.5px}
+  .mapbox{height:auto}
+  .mapbox svg{height:380px}
+  .legend{position:static;margin:0 10px 10px;max-width:none;backdrop-filter:none}
+  #segDots{display:grid;grid-template-columns:1fr 1fr}
+  #segDots button{justify-content:center;border-bottom:1px solid var(--line)}
+  #segDots button:nth-child(2n){border-right:0}
+  #segDots button:nth-last-child(-n+2){border-bottom:0}
+  .facts{grid-template-columns:1fr 1fr}
+  .pbar{grid-template-columns:96px 1fr 48px}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div>
+      <div class="eyebrow">Госдума 2026 · федеральный список · бумажные УИК Москвы</div>
+      <h1>Атлас УИК Москвы</h1>
+      <div class="sub">1 443 участка по 132 районам и 16 одномандатным округам. Региональные группы КПРФ № 33 и № 34: где КПРФ первая по бумажным бюллетеням, где участки отстают от среднего по группе и где по другим партиям статистика выбивается.</div>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="Фильтры">
+    <div class="ctl">
+      <label>Региональная группа</label>
+      <div class="seg" id="segGroup" role="group">
+        <button data-v="all" aria-pressed="true">Обе</button>
+        <button data-v="33" aria-pressed="false"><span class="dot" style="background:var(--g33)"></span>№ 33 · Кумин</button>
+        <button data-v="34" aria-pressed="false"><span class="dot" style="background:var(--g34)"></span>№ 34 · Царихин</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label>Слой карты</label>
+      <div class="seg" id="segLayer" role="group">
+        <button data-v="regions" aria-pressed="true">Районы</button>
+        <button data-v="okrugs" aria-pressed="false">Округа</button>
+        <button data-v="points" aria-pressed="false">Участки</button>
+      </div>
+    </div>
+    <div class="ctl" id="ctlMetric">
+      <label for="selMetric">Показатель</label>
+      <select id="selMetric"></select>
+    </div>
+    <div class="ctl" id="ctlDots" hidden>
+      <label>Точки участков</label>
+      <div class="seg" id="segDots" role="group">
+        <button data-v="all" aria-pressed="true">Все</button>
+        <button data-v="kprf" aria-pressed="false"><span class="dot" style="background:var(--kprf)"></span>КПРФ первая</button>
+        <button data-v="close" aria-pressed="false">На грани</button>
+        <button data-v="both" aria-pressed="false">Вместе</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label for="inpUik">Найти УИК</label>
+      <form class="search" id="formUik"><input id="inpUik" inputmode="numeric" placeholder="№ участка"><button type="submit">Найти</button></form>
+    </div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Сводка"></section>
+
+  <section class="main">
+    <div class="card">
+      <div class="card-h"><h2 id="mapTitle">Районы Москвы</h2><span class="note" id="mapNote"></span></div>
+      <div class="mapbox">
+        <svg id="map" role="img" aria-label="Карта Москвы по районам"></svg>
+        <div class="legend" id="legend"></div>
+        <div class="map-tools"><button id="zIn" title="Приблизить" aria-label="Приблизить">+</button><button id="zOut" title="Отдалить" aria-label="Отдалить">−</button><button id="zReset" title="Сбросить" aria-label="Сбросить масштаб">⌂</button></div>
+      </div>
+    </div>
+    <aside class="card insp" id="insp" aria-live="polite"></aside>
+  </section>
+
+  <section class="charts">
+    <div class="card"><div class="card-h"><h2 id="rankTitle">Рейтинг районов</h2><span class="note">12 лучших и 12 худших</span></div><div class="chart" id="chRank"></div></div>
+    <div class="card"><div class="card-h"><h2>Бумага против ДЭГ</h2><span class="note">доля КПРФ по округам</span></div><div class="leg" id="legDeg"></div><div class="chart" id="chDeg"></div></div>
+    <div class="card"><div class="card-h"><h2>Голоса за КПРФ на участке</h2><span class="note">сколько участков ниже и выше среднего</span></div><div class="leg" id="legHist"></div><div class="chart" id="chHist"></div></div>
+    <div class="card"><div class="card-h"><h2>Явка и доля ЕР по участкам</h2><span class="note">каждая точка: бумажный УИК</span></div><div class="leg" id="legScatter"></div><div class="chart" id="chScatter"></div></div>
+  </section>
+
+  <footer class="foot" id="foot"></footer>
+</div>
+<div class="tip" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="data.js"></script>
+<script>
+(function(){
+'use strict';
+const D = window.KPRF_DATA;
+if(!D){ document.getElementById('kpis').innerHTML = '<div class="notice">Файл data.js не загрузился. Он должен лежать рядом с index.html.</div>'; return; }
+
+const P = D.meta.parties, PI = Object.fromEntries(P.map((p,i)=>[p,i]));
+const iK = PI['КПРФ'], iER = PI['ЕР'], iL = PI['ЛДПР'];
+const GROUP = Object.fromEntries(D.groups.map(g=>[g.id,g]));
+const groupColor = g => g==33 ? 'var(--g33)' : 'var(--g34)';
+const fmtInt = d3.format(',.0f'), fmtPct1 = v => (v*100).toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const fmtNum = v => Number(v).toLocaleString('ru-RU');
+const fmtSigned = v => (v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString('ru-RU',{maximumFractionDigits:0});
+const fmtPp = v => (v>0?'+':v<0?'−':'')+Math.abs(v*100).toLocaleString('ru-RU',{maximumFractionDigits:1})+' п.п.';
+
+// enrich UIKs
+for(const u of D.uiks){
+  u.kprf = u.v[iK]; u.kprfPct = u.val? u.kprf/u.val : 0;
+  u.erPct = u.val? u.v[iER]/u.val : 0; u.ldprPct = u.val? u.v[iL]/u.val : 0;
+  u.turnout = u.el? (u.val+u.inv)/u.el : 0;
+  u.dev = u.kprf - GROUP[u.g].mean;
+  u.win = u.v.indexOf(Math.max(...u.v)); u.lead = u.val? (u.kprf - u.v[iER])/u.val : 0;
+  u.ratio = u.kprf / GROUP[u.g].mean;
+  u.dist = D.districts[u.di]; u.region = u.dist.region;
+  u.anoms = [];
+  // winner on the paper ballot: ties and empty protocols get their own category
+  const top = Math.max(...u.v), order = u.v.map((x,i)=>i).sort((a,b)=>u.v[b]-u.v[a]);
+  u.tie = u.val>0 && u.v[order[1]]===top;
+  u.tiedWith = u.tie ? order.filter(i=>u.v[i]===top) : null;
+  u.second = order[1];
+  u.margin = u.val ? (top - u.v[order[1]])/u.val : 0;
+  u.wcat = !u.val ? 'none' : u.tie ? 'tie' : P[u.win]==='КПРФ' ? 'kprf' : P[u.win]==='ЕР' ? 'er' : 'other';
+}
+const kWin = u => u.wcat==='kprf';
+const shortP = i => P[i]==='ЕР' ? 'ЕР' : P[i];
+// several UIKs often share one school: spread them around the building point
+for(const us of d3.group(D.uiks.filter(u=>u.ll), u=>u.ll.join(',')).values()){
+  us.sort((a,b)=>a.n-b.n);
+  us.forEach((u,i)=>{ const n=us.length; if(n===1){ u.off=[0,0]; return; } const ang = -Math.PI/2 + 2*Math.PI*i/n; u.off=[Math.cos(ang), Math.sin(ang)]; });
+}
+const uikIndex = new Map(D.uiks.map(u=>[u.g+':'+u.n, u]));
+for(const a of D.anomalies){
+  const u = uikIndex.get(a.g+':'+a.n); if(u){ u.anoms.push(a); a.u = u; }
+}
+const regionDistricts = d3.group(D.districts, d=>d.region);
+
+// ---- metrics ----
+const METRICS = {
+  kprfPct:   {label:'КПРФ, доля действительных', kind:'seq', ramp:'red', fmt:fmtPct1, calc:a=>a.val? a.kprf/a.val:0, legend:'Доля голосов за КПРФ'},
+  kprfDev:   {label:'КПРФ, голосов на УИК против среднего', kind:'div', fmt:v=>fmtPp(v).replace(' п.п.','%'), calc:a=>a.n? (a.kprfAvg - a.meanRef)/a.meanRef : 0, legend:'Среднее по участкам к среднему группы', note:'Синее: участки района в среднем отстают от среднего группы. Красное: опережают.'},
+  winner:    {label:'Первое место среди партий', kind:'cat', fmt:v=>D.meta.party_full[P[v]], calc:a=>a.votes.indexOf(Math.max(...a.votes)), rank:a=>a.val?(a.kprf-a.er)/a.val:0, rankFmt:fmtPp, rankLabel:'КПРФ минус ЕР', legend:'Кто первый по голосам'},
+  lead:      {label:'КПРФ минус ЕР, п.п.', kind:'div', fmt:fmtPp, calc:a=>a.val?(a.kprf-a.er)/a.val:0, legend:'Отрыв КПРФ от ЕР', note:'Синее: ЕР впереди. Красное: КПРФ впереди.'},
+  belowShare:{label:'Доля УИК ниже среднего КПРФ', kind:'seq', ramp:'blue', fmt:fmtPct1, calc:a=>a.n? a.below/a.n:0, legend:'Участков ниже среднего по группе'},
+  turnout:   {label:'Явка', kind:'seq', ramp:'grey', fmt:fmtPct1, calc:a=>a.el? (a.val+a.inv)/a.el:0, legend:'Явка на бумажных УИК'},
+  erPct:     {label:'Единая Россия, доля', kind:'seq', ramp:'grey', fmt:fmtPct1, calc:a=>a.val? a.er/a.val:0, legend:'Доля голосов за ЕР'},
+  ldprPct:   {label:'ЛДПР, доля', kind:'seq', ramp:'grey', fmt:fmtPct1, calc:a=>a.val? a.ldpr/a.val:0, legend:'Доля голосов за ЛДПР'},
+  anoms:     {label:'Аномалии по другим партиям', kind:'count', fmt:v=>fmtNum(v), calc:a=>a.anoms, legend:'Отмеченных участков'},
+};
+const sel = document.getElementById('selMetric');
+for(const [k,m] of Object.entries(METRICS)){ const o=document.createElement('option'); o.value=k; o.textContent=m.label; sel.appendChild(o); }
+
+// ---- state ----
+const S = { group:'all', layer:'regions', metric:'kprfPct', dots:'all', selected:null /* {type:'regions'|'okrugs', key} */, hit:null, sort:{k:'n',dir:1} };
+try{ const s=JSON.parse(localStorage.getItem('atlas-uik')||'{}'); if(s.metric&&METRICS[s.metric]) S.metric=s.metric; if(['regions','okrugs','points'].includes(s.layer)) S.layer=s.layer; if(s.group) S.group=s.group; if(['all','kprf','close','both'].includes(s.dots)) S.dots=s.dots; }catch(e){}
+sel.value = S.metric;
+const persist = ()=>{ try{ localStorage.setItem('atlas-uik', JSON.stringify({metric:S.metric,layer:S.layer,group:S.group,dots:S.dots})); }catch(e){} };
+// the points layer sits on top of districts: selection, ranking and tooltips use the district logic
+const BL = ()=> S.layer==='okrugs' ? 'okrugs' : 'regions';
+const MK = ()=> S.layer==='points' ? 'winner' : S.metric;
+const CLOSE = 0.05;
+const isKFirst = u => u.wcat==='kprf' || (u.tie && u.tiedWith.includes(iK));
+const isClose = u => u.val>0 && u.margin < CLOSE;
+const dotMatch = u => S.dots==='all' ? true : S.dots==='kprf' ? isKFirst(u) : S.dots==='close' ? isClose(u) : (isKFirst(u) || isClose(u));
+
+function filtered(){ return S.group==='all' ? D.uiks : D.uiks.filter(u=>u.g==+S.group); }
+function aggregate(list){
+  const a = {n:0, el:0, val:0, inv:0, kprf:0, er:0, ldpr:0, below:0, above:0, anoms:0, votes:P.map(()=>0), meanRefSum:0, groups:new Set()};
+  for(const u of list){
+    a.n++; a.el+=u.el; a.val+=u.val; a.inv+=u.inv; a.kprf+=u.kprf; a.er+=u.v[iER]; a.ldpr+=u.v[iL];
+    if(u.dev<0) a.below++; else if(u.dev>0) a.above++;
+    a.anoms += u.anoms.length; u.v.forEach((x,i)=>a.votes[i]+=x); a.meanRefSum += GROUP[u.g].mean; a.groups.add(u.g);
+  }
+  a.kprfAvg = a.n? a.kprf/a.n : 0; a.meanRef = a.n? a.meanRefSum/a.n : 1;
+  return a;
+}
+
+// ---- KPIs ----
+function renderKpis(){
+  const list = filtered(), a = aggregate(list);
+  const degList = D.deg.filter(d=>S.group==='all'||d.g==+S.group);
+  const degK = d3.sum(degList,d=>d.v[iK]), degV = d3.sum(degList,d=>d.val);
+  const meanTxt = S.group==='all' ? `${fmtNum(Math.round(GROUP[33].mean))} / ${fmtNum(Math.round(GROUP[34].mean))}` : fmtNum(Math.round(GROUP[+S.group].mean));
+  const tied = list.filter(u=>u.tie&&u.tiedWith.includes(iK)).length;
+  const items = [
+    {l:'КПРФ на бумаге', v:fmtPct1(a.val?a.kprf/a.val:0), d:`${fmtNum(a.kprf)} голосов. В ДЭГ ${fmtPct1(degV?degK/degV:0)}`, red:true},
+    {l:'КПРФ на первом месте', v:fmtNum(winDistricts(list)), s:`районов из ${fmtNum(regionsIn(list))}`, d:`${fmtNum(list.filter(kWin).length)} участков${tied?`, ещё ${tied} вничью`:''}`, red:true},
+    {l:'Голосов КПРФ на участок', v:meanTxt, d:S.group==='all'?'в среднем, группа № 33 / № 34':`в среднем по группе № ${S.group}`},
+    {l:'Ниже среднего группы', v:fmtNum(a.below), s:`из ${fmtNum(a.n)} УИК`, d:`${fmtPct1(a.n?a.below/a.n:0)} участков отстают`},
+    {l:'Аномалии по другим партиям', v:fmtNum(a.anoms), d:'статистические выбросы, не вывод о нарушениях'},
+  ];
+  document.getElementById('kpis').innerHTML = items.map(k=>`<div class="kpi${k.red?' k-red':''}"><div class="eyebrow">${k.l}</div><div class="v">${k.v}${k.s?`<small>${k.s}</small>`:''}</div><div class="d">${k.d}</div></div>`).join('');
+}
+function regionsIn(list){ return new Set(list.map(u=>u.di)).size; }
+function winDistricts(list){ let n=0; for(const [di,us] of d3.group(list,u=>u.di)){ const a=aggregate(us); if(P[a.votes.indexOf(Math.max(...a.votes))]==='КПРФ') n++; } return n; }
+
+// ---- map ----
+const svg = d3.select('#map'), gRoot = svg.append('g');
+const gFill = gRoot.append('g'), gLines = gRoot.append('g'), gDots = gRoot.append('g'), gLabels = gRoot.append('g');
+const projection = d3.geoMercator(), path = d3.geoPath(projection);
+let curK = 1;
+const zoom = d3.zoom().scaleExtent([1,16]).on('zoom', e=>{ curK = e.transform.k; gRoot.attr('transform', e.transform); gLabels.selectAll('text').style('font-size', (11/Math.sqrt(curK))+'px').style('stroke-width', (3/Math.sqrt(curK))+'px'); if(S.layer==='points') placeDots(); });
+svg.call(zoom);
+document.getElementById('zIn').onclick = ()=>svg.transition().duration(250).call(zoom.scaleBy,1.6);
+document.getElementById('zOut').onclick = ()=>svg.transition().duration(250).call(zoom.scaleBy,1/1.6);
+document.getElementById('zReset').onclick = ()=>svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+
+const seqColors = ['--seq1','--seq2','--seq3','--seq4','--seq5','--seq6','--seq7'].map(v=>`var(${v})`);
+// one hue per meaning: red only for KPRF itself, blue for "below the mean", neutral grey for everything else
+const RAMPS = {
+  red: seqColors,
+  blue: [14,27,40,54,68,83,100].map(p=>`color-mix(in srgb,var(--div-neg) ${p}%,var(--surface))`),
+  grey: [10,21,33,46,60,75,90].map(p=>`color-mix(in srgb,var(--fg) ${p}%,var(--surface))`),
+};
+const RAMP_TOP = {red:'var(--kprf)', blue:'var(--div-neg)', grey:'var(--fg-2)'};
+const COUNT_COLS = ['var(--surface-2)', ...[22,42,64,88].map(p=>`color-mix(in srgb,var(--fg) ${p}%,var(--surface))`)];
+function features(){ return BL()==='regions' ? D.regions.features : D.okrugs.features; }
+function featKey(f){ return BL()==='regions' ? f.properties.name : String(f.properties.num); }
+function featUiks(f, list){ return BL()==='regions' ? list.filter(u=>u.region===f.properties.name) : list.filter(u=>u.o===f.properties.num); }
+function featTitle(f){ return BL()==='regions' ? f.properties.name : `Округ № ${f.properties.num} · ${f.properties.name}`; }
+
+let scale = null, mapAgg = new Map();
+function computeMap(){
+  const list = filtered(), m = METRICS[MK()];
+  mapAgg = new Map();
+  for(const f of features()){ const us = featUiks(f,list); const a = aggregate(us); a.value = m.calc(a); a.rv = m.rank ? m.rank(a) : a.value; a.f=f; mapAgg.set(featKey(f), a); }
+  const vals = [...mapAgg.values()].filter(a=>a.n>0).map(a=>a.value);
+  if(m.kind==='seq'){
+    const q = d3.scaleQuantile().domain(vals).range(RAMPS[m.ramp||'red']);
+    scale = {type:'seq', q, color:v=>q(v), ticks:q.quantiles()};
+  } else if(m.kind==='div'){
+    const ext = Math.max(0.05, Math.min(0.6, d3.max(vals, v=>Math.abs(v))||0.3));
+    const steps = [-ext,-ext*.5,-ext*.15,ext*.15,ext*.5,ext];
+    const cols = ['var(--div-neg)','color-mix(in srgb,var(--div-neg) 60%,var(--div-mid))','color-mix(in srgb,var(--div-neg) 25%,var(--div-mid))','var(--div-mid)','color-mix(in srgb,var(--div-pos) 25%,var(--div-mid))','color-mix(in srgb,var(--div-pos) 60%,var(--div-mid))','var(--div-pos)'];
+    const t = d3.scaleThreshold().domain(steps).range(cols);
+    scale = {type:'div', color:v=>t(v), ticks:steps, ext};
+  } else if(m.kind==='cat'){
+    scale = {type:'cat', color:v=> P[v]==='КПРФ' ? 'var(--kprf)' : P[v]==='ЕР' ? 'var(--fg-3)' : 'var(--g33)'};
+  } else {
+    const mx = Math.max(1, d3.max(vals)||1);
+    const t = d3.scaleThreshold().domain([1,2,3,5]).range(COUNT_COLS);
+    scale = {type:'count', color:v=>t(v), ticks:[0,1,2,3,'5+'], mx};
+  }
+}
+
+function fitProjection(){
+  const box = svg.node().getBoundingClientRect();
+  // fit to the districts inside the ring road and Zelenograd; the two large New Moscow okrugs hang below the frame and are reached by zooming out
+  const core = {type:'FeatureCollection', features: D.regions.features.filter(f=>f.properties.parts.length===1)};
+  projection.fitExtent([[14,14],[box.width-14,box.height-14]], core);
+  dotBase = Math.max(.5, Math.min(1, box.width/880));
+}
+
+function drawMap(){
+  const feats = features();
+  const paths = gFill.selectAll('path.region').data(feats, featKey);
+  paths.exit().remove();
+  paths.enter().append('path').attr('class','region')
+    .on('mousemove', (e,f)=>showTip(e, tipHtml(f))).on('mouseleave', hideTip)
+    .on('click', (e,f)=>{ e.stopPropagation(); select({type:BL(), key:featKey(f)}); });
+  gFill.selectAll('path.region').attr('d', path);
+  // okrug borders + labels over the regions layer
+  gLines.selectAll('path').data(BL()==='regions'? D.okrugs.features : []).join('path').attr('class','okrug-line').attr('d', path);
+  gLabels.selectAll('text').data(D.okrugs.features, f=>f.properties.num).join('text').attr('class','okrug-label')
+    .attr('transform', f=>`translate(${path.centroid(f)})`).attr('text-anchor','middle').attr('dy','.35em').style('font-size', (11/Math.sqrt(curK))+'px').style('stroke-width', (3/Math.sqrt(curK))+'px').text(f=>f.properties.num);
+  drawDots();
+  styleMap();
+}
+
+// ---- polling station dots ----
+const WCOL = {kprf:'var(--kprf)', er:'var(--fg-3)', other:'var(--g33)', none:'var(--surface)'};
+const pColor = i => P[i]==='КПРФ' ? WCOL.kprf : P[i]==='ЕР' ? WCOL.er : WCOL.other;
+const APPROX = {r:'место приблизительное: найдена только улица', p:'место приблизительное: найден только посёлок или микрорайон', d:'адрес помещения не найден, точка стоит в центре района'};
+let dotBase = 1; // dots shrink on narrow maps so the centre stays readable
+const dotR = u => dotBase * Math.min(6.5, 1.5 + 0.08*Math.sqrt(u.val||0));
+const dotScale = ()=> Math.pow(curK, 0.6);
+function drawDots(){
+  if(S.layer!=='points'){ gDots.selectAll('*').remove(); return; }
+  if(drawDots.base!==dotBase){ gDots.selectAll('*').remove(); drawDots.base = dotBase; }
+  const list = filtered().filter(u=>u.ll);
+  for(const u of list) u.px = projection([u.ll[1], u.ll[0]]);
+  const g = gDots.selectAll('g.udot').data(list, u=>u.g+':'+u.n);
+  g.exit().remove();
+  const ge = g.enter().append('g').attr('class','udot')
+    .on('mousemove',(e,u)=>showTip(e, dotTip(u))).on('mouseleave', hideTip)
+    .on('click',(e,u)=>{ e.stopPropagation(); select({type:'regions', key:u.region}, S.hit===u?null:u); });
+  ge.each(function(u){
+    const s = d3.select(this), r = dotR(u);
+    if(u.wcat==='tie'){
+      const other = u.tiedWith.find(i=>i!==iK) ?? u.tiedWith[1];
+      s.append('path').attr('class','core').attr('d',`M0,${-r}A${r},${r} 0 0 0 0,${r}Z`).attr('fill', pColor(iK));
+      s.append('path').attr('class','core').attr('d',`M0,${-r}A${r},${r} 0 0 1 0,${r}Z`).attr('fill', pColor(other));
+      s.append('circle').attr('class','edge').attr('r', r).attr('fill','none');
+    } else {
+      s.append('circle').attr('class','core edge').attr('r', r).attr('fill', WCOL[u.wcat]);
+    }
+    if(u.anoms.length) s.append('circle').attr('class','ring').attr('r', r+1.7).attr('fill','none').attr('stroke','var(--fg)').attr('stroke-width',1.1);
+  });
+  gDots.selectAll('g.udot .core').attr('fill-opacity', u=> u.wcat!=='tie' && u.val>0 && u.margin<CLOSE ? .42 : 1);
+  placeDots();
+}
+function placeDots(){
+  const k = dotScale();
+  gDots.selectAll('g.udot').attr('transform', u=>{
+    const sp = dotR(u)*1.05; const hit = S.hit===u ? 1.7 : 1;
+    return `translate(${u.px[0] + u.off[0]*sp/k},${u.px[1] + u.off[1]*sp/k}) scale(${hit/k})`;
+  });
+}
+function styleDots(){
+  if(S.layer!=='points') return;
+  const selUs = selectedUiks(filtered()), selSet = selUs ? new Set(selUs) : null;
+  gDots.selectAll('g.udot')
+    .attr('opacity', u=> !dotMatch(u) ? .1 : (selSet && !selSet.has(u)) ? .35 : 1)
+    .classed('off', u=> !dotMatch(u));
+  const shown = filtered().filter(u=>u.ll && dotMatch(u)).length, total = filtered().filter(u=>u.ll).length;
+  document.getElementById('mapNote').textContent = (S.dots==='all' ? 'точка: помещение для голосования' : `показано ${fmtNum(shown)} из ${fmtNum(total)} участков`) + (S.group==='all' ? '' : `, группа № ${S.group}`);
+  // paint order: faint below, ER and others, ties, KPRF on top, the picked dot last
+  const rank = u => !dotMatch(u) ? 0 : u.wcat==='er' ? 1 : u.wcat==='other'||u.wcat==='none' ? 2 : u.wcat==='tie' ? 3 : 4;
+  gDots.selectAll('g.udot').sort((a,b)=> (S.hit===a) - (S.hit===b) || (selSet? selSet.has(a)-selSet.has(b) : 0) || rank(a)-rank(b));
+  drawDotsStroke();
+  placeDots();
+}
+function drawDotsStroke(){
+  gDots.selectAll('g.udot').each(function(u){
+    if(S.hit===u){ d3.select(this).selectAll('.edge').attr('stroke','var(--sel)').attr('stroke-width',1.4).attr('stroke-dasharray',null); return; }
+    const approx = u.src && u.src!=='m' && u.src!=='o';
+    d3.select(this).selectAll('.edge')
+      .attr('stroke', u.wcat==='none' ? 'var(--fg-3)' : approx ? 'var(--fg)' : (u.val>0 && u.margin<CLOSE && u.wcat!=='tie') ? WCOL[u.wcat] : 'var(--surface)')
+      .attr('stroke-width', approx || u.wcat==='none' ? .9 : u.margin<CLOSE ? 1 : .6)
+      .attr('stroke-dasharray', approx || u.wcat==='none' ? '1.6 1.2' : null);
+  });
+}
+function winnerTxt(u){
+  if(u.wcat==='none') return 'бюллетеней нет';
+  if(u.tie) return 'ничья: ' + u.tiedWith.map(shortP).join(' = ');
+  return D.meta.party_full[P[u.win]];
+}
+function dotTip(u){
+  const approx = APPROX[u.src];
+  return `<b>УИК ${u.n}</b> · ${u.dist.name.replace('район ','')}<div style="opacity:.85">${u.adr||''}</div>${u.inst?`<div style="opacity:.6">${u.inst}</div>`:''}`
+    + `<div class="row" style="margin-top:4px"><span>Первая</span><span>${winnerTxt(u)}</span></div>`
+    + (u.val && !u.tie ? `<div class="row"><span>Отрыв от ${shortP(u.second)}</span><span>${fmtPp(u.margin).replace('+','')}</span></div>` : '')
+    + `<div class="row"><span>КПРФ</span><span>${fmtPct1(u.kprfPct)} · ${fmtNum(u.kprf)}</span></div><div class="row"><span>ЕР</span><span>${fmtPct1(u.erPct)}</span></div><div class="row"><span>Явка</span><span>${fmtPct1(u.turnout)}</span></div><div class="row"><span>Бюллетеней</span><span>${fmtNum(u.val)}</span></div>`
+    + (approx ? `<div style="margin-top:4px;opacity:.75">${approx}</div>` : '')
+    + (u.anoms.length ? `<div style="margin-top:4px"><b>Аномалия.</b> ${u.anoms.map(a=>a.party+': '+a.why).join('<br>')}</div>` : '');
+}
+function updateDotButtons(){
+  const list = filtered();
+  const nK = list.filter(isKFirst).length, nC = list.filter(isClose).length, nB = list.filter(u=>isKFirst(u)||isClose(u)).length;
+  const b = document.querySelectorAll('#segDots button');
+  b[1].innerHTML = `<span class="dot" style="background:var(--kprf)"></span>КПРФ первая · ${fmtNum(nK)}`;
+  b[2].textContent = `На грани · ${fmtNum(nC)}`; b[2].title = 'Отрыв первой партии от второй меньше 5 п.п.'; b[1].title = 'КПРФ первая или делит первое место';
+  b[3].textContent = `Вместе · ${fmtNum(nB)}`; b[3].title = 'КПРФ первая, плюс все участки, где отрыв первой партии меньше 5 п.п.';
+}
+
+function styleMap(){
+  const m = METRICS[MK()];
+  gFill.selectAll('path.region')
+    .attr('fill', f=>{ const a = mapAgg.get(featKey(f)); return (S.layer==='points' || !a || a.n===0) ? 'var(--surface-2)' : scale.color(a.value); })
+    .classed('dim', f=>{ const a = mapAgg.get(featKey(f)); return !a||a.n===0; })
+    .classed('selected', f=> S.selected && S.selected.type===BL() && S.selected.key===featKey(f));
+  gFill.selectAll('path.region.selected').raise();
+  document.getElementById('mapTitle').textContent = S.layer==='points' ? 'Участки · кто первый на бумажном УИК' : (S.layer==='regions'?'Районы Москвы':'Одномандатные округа') + ' · ' + m.label;
+  document.getElementById('mapNote').textContent = S.layer==='points'
+    ? (S.group==='all' ? 'точка: помещение для голосования' : `группа № ${S.group}, точки другой группы скрыты`)
+    : (S.group==='all' ? 'обе группы' : `группа № ${S.group}, остальные районы приглушены`);
+  styleDots();
+  renderLegend();
+}
+function renderLegend(){
+  const m = METRICS[MK()], el = document.getElementById('legend');
+  if(S.layer==='points'){
+    const list = filtered(), c = d3.rollup(list, v=>v.length, u=>u.wcat);
+    const oth = d3.rollups(list.filter(u=>u.wcat==='other'), v=>v.length, u=>P[u.win]).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${p} ${n}`).join(', ');
+    const nClose = list.filter(u=>u.val>0 && u.margin<CLOSE).length, nApprox = list.filter(u=>APPROX[u.src]).length;
+    el.innerHTML = `<div class="t">Кто первый на участке</div><div class="lg-rows">`
+      + `<div class="lg-row"><i class="lg-sw" style="background:var(--kprf)"></i>КПРФ<b>${fmtNum(c.get('kprf')||0)}</b></div>`
+      + `<div class="lg-row"><i class="lg-sw" style="background:var(--fg-3)"></i>Единая Россия<b>${fmtNum(c.get('er')||0)}</b></div>`
+      + `<div class="lg-row"><i class="lg-sw" style="background:var(--g33)"></i>Другая партия <small>${oth}</small><b>${fmtNum(c.get('other')||0)}</b></div>`
+      + (c.get('tie') ? `<div class="lg-row"><i class="lg-sw tie"></i>${list.every(u=>u.wcat!=='tie'||u.tiedWith.includes(iK))?'Ничья, КПРФ делит 1-е место':'Ничья'}<b>${fmtNum(c.get('tie'))}</b></div>` : '')
+      + `</div><div class="lg-keys">Бледная точка: отрыв меньше 5 п.п. (${fmtNum(nClose)}). Кольцо: аномалия по другой партии. Пунктир: место приблизительное (${fmtNum(nApprox)}). Размер: число бюллетеней.</div>`;
+    return;
+  }
+  if(scale.type==='seq'){
+    const t = scale.ticks;
+    el.innerHTML = `<div class="t">${m.legend}</div><div class="ramp">${RAMPS[m.ramp||'red'].map(c=>`<span style="background:${c}"></span>`).join('')}</div><div class="ticks"><span>${m.fmt(d3.min([...mapAgg.values()].filter(a=>a.n).map(a=>a.value))||0)}</span><span>${m.fmt(t[Math.floor(t.length/2)]||0)}</span><span>${m.fmt(d3.max([...mapAgg.values()].map(a=>a.value))||0)}</span></div><div>Квантили: в каждом оттенке равное число ${BL()==='regions'?'районов':'округов'}</div>`;
+  } else if(scale.type==='div'){
+    const cols = ['var(--div-neg)','color-mix(in srgb,var(--div-neg) 60%,var(--div-mid))','color-mix(in srgb,var(--div-neg) 25%,var(--div-mid))','var(--div-mid)','color-mix(in srgb,var(--div-pos) 25%,var(--div-mid))','color-mix(in srgb,var(--div-pos) 60%,var(--div-mid))','var(--div-pos)'];
+    el.innerHTML = `<div class="t">${m.legend}</div><div class="ramp">${cols.map(c=>`<span style="background:${c}"></span>`).join('')}</div><div class="ticks"><span>${m.fmt(-scale.ext)}</span><span>0</span><span>${m.fmt(scale.ext)}</span></div><div>${m.note||''}</div>`;
+  } else if(scale.type==='cat'){
+    const cnt = {}; for(const a of mapAgg.values()){ if(!a.n) continue; const k = P[a.value]==='КПРФ'?'КПРФ':P[a.value]==='ЕР'?'ЕР':'другая'; cnt[k]=(cnt[k]||0)+1; }
+    const unit = BL()==='regions'?'контуров':'округов';
+    el.innerHTML = `<div class="t">${m.legend}</div><div style="display:flex;flex-direction:column;gap:3px;margin-top:6px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--kprf);margin-right:6px;vertical-align:-1px"></i>КПРФ первая: ${cnt['КПРФ']||0} ${unit}</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--fg-3);margin-right:6px;vertical-align:-1px"></i>Единая Россия: ${cnt['ЕР']||0}</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--g33);margin-right:6px;vertical-align:-1px"></i>Другая партия: ${cnt['другая']||0}</span></div><div style="margin-top:4px">Только бумажные бюллетени, без ДЭГ.</div>`;
+  } else {
+    const cols = COUNT_COLS;
+    el.innerHTML = `<div class="t">${m.legend}</div><div class="ramp">${cols.map(c=>`<span style="background:${c}"></span>`).join('')}</div><div class="ticks"><span>0</span><span>1</span><span>2</span><span>3–4</span><span>5+</span></div><div>Кольцо у номера в таблице участков: УИК с аномалией.</div>`;
+  }
+}
+function tipHtml(f){
+  const a = mapAgg.get(featKey(f)), m = METRICS[MK()];
+  if(!a||!a.n) return `<b>${featTitle(f)}</b><div>Нет участков выбранной группы</div>`;
+  const parts = BL()==='regions' && f.properties.parts.length>1 ? `<div style="opacity:.75">${f.properties.parts.map(p=>p.replace('район ','')).join(', ')}</div>` : '';
+  return `<b>${featTitle(f)}</b>${parts}<div class="row"><span>${m.label}</span><span>${m.fmt(a.value)}</span></div><div class="row"><span>УИК</span><span>${a.n}</span></div><div class="row"><span>КПРФ</span><span>${fmtPct1(a.kprf/a.val)}</span></div><div class="row"><span>Первая</span><span>${P[a.votes.indexOf(Math.max(...a.votes))]} · ${fmtPp((a.kprf-a.er)/a.val).replace(' п.п.','')} к ЕР</span></div><div class="row"><span>Ниже среднего</span><span>${a.below} из ${a.n}</span></div><div class="row"><span>Явка</span><span>${fmtPct1((a.val+a.inv)/a.el)}</span></div>`;
+}
+const tip = document.getElementById('tip');
+function showTip(e, html){ tip.innerHTML = html; tip.style.opacity = 1; const w = tip.offsetWidth, h = tip.offsetHeight; let x = e.clientX+14, y = e.clientY+14; if(x+w>innerWidth-8) x = e.clientX-w-10; if(y+h>innerHeight-8) y = e.clientY-h-10; tip.style.left=x+'px'; tip.style.top=y+'px'; }
+function hideTip(){ tip.style.opacity = 0; }
+svg.on('click', ()=>select(null));
+
+// ---- selection & inspector ----
+function select(s, hit){
+  S.selected = s; S.hit = hit||null;
+  styleMap(); renderInspector(); renderRank(); renderScatter();
+}
+function selectedUiks(list){
+  if(!S.selected) return null;
+  if(S.selected.type==='regions') return list.filter(u=>u.region===S.selected.key);
+  return list.filter(u=>u.o===+S.selected.key);
+}
+function partyBars(a){
+  const rows = P.map((p,i)=>({p, v:a.votes[i], pct:a.val?a.votes[i]/a.val:0})).sort((x,y)=>y.pct-x.pct);
+  const mx = rows[0].pct||1;
+  return `<div class="pbars">${rows.map(r=>`<div class="pbar${r.p==='КПРФ'?' kprf':''}" title="${D.meta.party_full[r.p]}: ${fmtNum(r.v)} голосов"><span class="n">${D.meta.party_full[r.p]}</span><span class="bar"><i style="width:${(r.pct/mx*100).toFixed(1)}%"></i></span><span class="v">${fmtPct1(r.pct)}</span></div>`).join('')}</div>`;
+}
+const COLS = [
+  {k:'n', l:'УИК', f:u=>u.n, cls:''},
+  {k:'el', l:'Избир.', f:u=>fmtNum(u.el)},
+  {k:'turnout', l:'Явка', f:u=>fmtPct1(u.turnout)},
+  {k:'kprf', l:'КПРФ', f:u=>fmtNum(u.kprf), cls:'kv'},
+  {k:'kprfPct', l:'КПРФ %', f:u=>fmtPct1(u.kprfPct), cls:'kv'},
+  {k:'dev', l:'К средн.', f:u=>fmtSigned(u.dev), cls:'kv'},
+  {k:'erPct', l:'ЕР %', f:u=>fmtPct1(u.erPct)},
+  {k:'win', l:'Первая', f:u=> u.tie ? u.tiedWith.map(shortP).join(' = ') : !u.val ? '—' : P[u.win]==='КПРФ'?'<b style="color:var(--kprf)">КПРФ</b>':P[u.win]},
+];
+function renderInspector(){
+  const el = document.getElementById('insp');
+  const list = filtered();
+  const us = selectedUiks(list);
+  if(!us){
+    const a = aggregate(list);
+    const hdr = S.group==='all' ? 'Вся Москва, обе группы' : `Группа № ${S.group} · ${GROUP[+S.group].leader}`;
+    el.innerHTML = `<div class="insp-h"><div class="eyebrow">Обзор</div><div class="title">${hdr}</div><div class="crumbs">${S.group==='all'?D.groups.map(g=>`<span class="gchip"><i style="background:${groupColor(g.id)}"></i>№ ${g.id} · округа ${g.okrugs.join(', ')}</span>`).join(''):`<span>округа ${GROUP[+S.group].okrugs.join(', ')}</span>`}</div></div>
+    <div class="insp-b">
+      <div class="facts">
+        <div class="fact"><div class="l">Явка на бумаге</div><div class="v">${fmtPct1((a.val+a.inv)/a.el)}</div></div>
+        <div class="fact"><div class="l">КПРФ минус ЕР</div><div class="v ${(a.kprf-a.er)<0?'neg':'pos'}">${fmtPp((a.kprf-a.er)/a.val)}</div></div>
+      </div>
+      <div><div class="sect">Партии, доля действительных</div>${partyBars(a)}</div>
+      <div class="notice">Клик по району, округу или точке участка открывает список участков. Колесо мыши и кнопки справа масштабируют карту, Новая Москва ниже кадра.</div>
+      <div><div class="sect">Аномалии по другим партиям <span class="note">${D.anomalies.filter(x=>S.group==='all'||x.g==+S.group).length} отмечено</span></div>${(()=>{ const all = D.anomalies.filter(x=>S.group==='all'||x.g==+S.group); return anomList(all.slice(0,5)) + (all.length>5?`<div class="empty" style="margin-top:6px">Ещё ${all.length-5} видны при выборе района.</div>`:''); })()}</div>
+    </div>`;
+    return;
+  }
+  const a = aggregate(us);
+  const isR = S.selected.type==='regions';
+  const f = isR ? D.regions.features.find(x=>x.properties.name===S.selected.key) : D.okrugs.features.find(x=>x.properties.num===+S.selected.key);
+  const title = isR ? S.selected.key : `Округ № ${S.selected.key}`;
+  const crumbs = isR
+    ? `<span>округ № ${f.properties.o} · ${D.okrug_names[f.properties.o]}</span><span class="gchip"><i style="background:${groupColor(f.properties.g)}"></i>группа № ${f.properties.g}</span>${f.properties.parts.length>1?`<span>${f.properties.parts.join(', ')}</span>`:''}`
+    : `<span>${f.properties.name}</span><span class="gchip"><i style="background:${groupColor(f.properties.g)}"></i>группа № ${f.properties.g}</span><span>${new Set(us.map(u=>u.di)).size} районов</span>`;
+  const mean = a.meanRef;
+  const devAvg = a.kprfAvg - mean;
+  const anoms = us.flatMap(u=>u.anoms).sort((x,y)=>y.z-x.z);
+  el.innerHTML = `<div class="insp-h"><button class="clear" id="btnClear">✕ сбросить</button><div class="eyebrow">${isR?'Район':'Одномандатный округ'}</div><div class="title">${title}</div><div class="crumbs">${crumbs}</div></div>
+  <div class="insp-b">
+    ${a.n===0?`<div class="notice">В выбранной группе здесь нет участков. Переключите группу на «Обе».</div>`:`
+    <div class="facts">
+      <div class="fact"><div class="l">Бумажных УИК</div><div class="v">${fmtNum(a.n)}</div></div>
+      <div class="fact"><div class="l">Явка</div><div class="v">${fmtPct1((a.val+a.inv)/a.el)}</div></div>
+      <div class="fact"><div class="l">КПРФ, доля</div><div class="v pos">${fmtPct1(a.kprf/a.val)}</div></div>
+      <div class="fact"><div class="l">КПРФ на УИК</div><div class="v ${devAvg<0?'neg':'pos'}">${fmtNum(Math.round(a.kprfAvg))}<small>${fmtSigned(Math.round(devAvg))} к ${fmtNum(Math.round(mean))}</small></div></div>
+      <div class="fact"><div class="l">Ниже среднего</div><div class="v neg">${a.below}<small>из ${a.n}</small></div></div>
+      <div class="fact"><div class="l">УИК, где КПРФ первая</div><div class="v pos">${us.filter(kWin).length}<small>из ${a.n}${us.some(u=>u.tie&&u.tiedWith.includes(iK))?` · ${us.filter(u=>u.tie&&u.tiedWith.includes(iK)).length} вничью`:''}</small></div></div>
+      <div class="fact"><div class="l">Первое место</div><div class="v ${P[a.votes.indexOf(Math.max(...a.votes))]==='КПРФ'?'pos':''}" style="font-family:var(--font-body);font-size:15px">${D.meta.party_full[P[a.votes.indexOf(Math.max(...a.votes))]]}</div></div>
+      <div class="fact"><div class="l">КПРФ минус ЕР</div><div class="v ${(a.kprf-a.er)<0?'neg':'pos'}">${fmtPp((a.kprf-a.er)/a.val)}</div></div>
+    </div>
+    <div><div class="sect">Партии, доля действительных</div>${partyBars(a)}</div>
+    <div><div class="sect">Участки <span class="note">клик по заголовку сортирует · синее: ниже среднего группы</span></div><div class="tscroll" id="tscroll">${uikTable(us)}</div></div>
+    <div><div class="sect">Аномалии по другим партиям <span class="note">${anoms.length?anoms.length+' отмечено':''}</span></div>${anoms.length?anomList(anoms):'<div class="empty">Не отмечено.</div>'}</div>`}
+  </div>`;
+  document.getElementById('btnClear').onclick = ()=>select(null);
+  bindTable(us);
+  const hit = el.querySelector('tr.hit'); if(hit) hit.scrollIntoView({block:'center'});
+}
+function uikTable(us){
+  const {k,dir} = S.sort;
+  const kk = k==='win' ? 'lead' : k;
+  const rows = [...us].sort((a,b)=> (a[kk]>b[kk]?1:a[kk]<b[kk]?-1:0)*dir || a.n-b.n);
+  return `<table class="uik"><thead><tr>${COLS.map(c=>`<th data-k="${c.k}" ${c.k===k?`aria-sort="${dir>0?'ascending':'descending'}"`:''}>${c.l}</th>`).join('')}</tr></thead><tbody>${rows.map(u=>`<tr class="${u.dev<0?'below':u.dev>0?'above':''}${u.anoms.length?' anom':''}${S.hit===u?' hit':''}" data-g="${u.g}" data-n="${u.n}">${COLS.map(c=>`<td class="${c.cls||''}">${c.f(u)}${c.k==='n'&&S.selected.type==='okrugs'?`<span class="d">${u.dist.name.replace('район ','')}</span>`:''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function bindTable(us){
+  document.querySelectorAll('table.uik th').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; S.sort = S.sort.k===k ? {k, dir:-S.sort.dir} : {k, dir: k==='n'?1:-1}; document.getElementById('tscroll').innerHTML = uikTable(us); bindTable(us); });
+  document.querySelectorAll('table.uik tbody tr').forEach(tr=>tr.onclick=()=>{ const u = uikIndex.get(tr.dataset.g+':'+tr.dataset.n); S.hit = (S.hit===u)?null:u; document.getElementById('tscroll').innerHTML = uikTable(us); bindTable(us); renderScatter(); styleDots(); });
+}
+function anomList(list){
+  return `<div class="anoms">${list.map(a=>`<div class="anom"><b>УИК ${a.n}</b> · ${D.districts[a.di].name} · ${a.party} ${fmtPct1(a.share)} при медиане ${fmtPct1(a.median)}<div class="why">${a.why}; явка ${fmtPct1(a.turnout)}</div></div>`).join('')}</div>`;
+}
+
+// ---- rank chart: sorted bars, values on the open side of the zero line ----
+function renderRank(){
+  const m = METRICS[MK()], host = document.getElementById('chRank');
+  document.getElementById('rankTitle').textContent = (BL()==='regions'?'Рейтинг районов':'Рейтинг округов') + ' · ' + (m.rankLabel||m.label);
+  const rows = [...mapAgg.values()].filter(a=>a.n>0).map(a=>({...a, value:a.rv})).sort((x,y)=>y.value-x.value);
+  const fmtR = m.rankFmt || m.fmt;
+  const top = rows.slice(0,12), bot = rows.length>24 ? rows.slice(-12) : rows.slice(12);
+  const data = rows.length>24 ? [...top, null, ...bot] : rows;
+  const W = host.clientWidth||600, rowH = 19, mL = W<480 ? 118 : 150, mR = 58, H = data.length*rowH + 10;
+  host.innerHTML = '';
+  const s = d3.select(host).append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);
+  const neg = m.kind==='div' || m.kind==='cat';
+  const ext = d3.max(rows, d=>Math.abs(d.value))||1;
+  const x = neg ? d3.scaleLinear().domain([-ext,ext]).range([mL, W-mR]) : d3.scaleLinear().domain([0, d3.max(rows,d=>d.value)||1]).range([mL, W-mR]);
+  const fill = d=> neg ? (d.value<0?'var(--div-neg)':'var(--div-pos)') : m.kind==='count' ? 'var(--fg-2)' : (RAMP_TOP[m.ramp||'red']);
+  const name = d=> BL()==='regions' ? d.f.properties.name.replace('район ','').replace(' административный округ',' АО') : `${d.f.properties.num} ${d.f.properties.name}`;
+  const maxCh = W<480 ? 17 : 24;
+  const g = s.selectAll('g.rank-row').data(data.filter(Boolean), d=>featKey(d.f)).join('g').attr('class','rank-row')
+    .classed('sel', d=> S.selected && S.selected.type===BL() && S.selected.key===featKey(d.f))
+    .attr('transform',d=>`translate(0,${data.indexOf(d)*rowH+4})`)
+    .on('click',(e,d)=>select({type:BL(), key:featKey(d.f)}))
+    .on('mousemove',(e,d)=>showTip(e, tipHtml(d.f))).on('mouseleave',hideTip);
+  g.append('rect').attr('class','hit').attr('x',0).attr('y',0).attr('width',W).attr('height',rowH).attr('fill','transparent');
+  g.append('rect').attr('x', d=> neg? Math.min(x(0),x(d.value)) : x(0)).attr('y',3).attr('height',rowH-7).attr('rx',2)
+    .attr('width', d=> Math.max(1, Math.abs(x(d.value)-x(0)))).attr('fill', fill);
+  g.append('text').attr('class','lbl').attr('x', mL-8).attr('y', rowH/2+3).attr('text-anchor','end')
+    .text(d=>{ const t = name(d); return t.length>maxCh ? t.slice(0,maxCh-1)+'…' : t; });
+  // a negative bar grows left, so its value sits right of zero and never runs into the names
+  g.append('text').attr('class','val').attr('x', d=> neg && d.value<0 ? x(0)+5 : x(d.value)+5).attr('text-anchor','start').attr('y', rowH/2+3).text(d=>fmtR(d.value));
+  if(rows.length>24){
+    const gap = data.indexOf(null);
+    s.append('text').attr('class','val').attr('x', mL-8).attr('y', gap*rowH+rowH/2+6).attr('text-anchor','end').text(`… ещё ${rows.length-24}`);
+  }
+  if(neg) s.append('line').attr('class','zero').attr('x1',x(0)).attr('x2',x(0)).attr('y1',0).attr('y2',H);
+}
+
+// ---- scatter: turnout vs ER share; grey cloud, anomalies ringed, the selected territory in ink ----
+function renderScatter(){
+  const host = document.getElementById('chScatter'), list = filtered();
+  const W = host.clientWidth||600, H = 320, m = {t:10,r:16,b:34,l:44};
+  host.innerHTML='';
+  const s = d3.select(host).append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);
+  const x = d3.scaleLinear().domain([0,1]).range([m.l, W-m.r]), y = d3.scaleLinear().domain([0,1]).range([H-m.b, m.t]);
+  s.append('g').attr('class','grid').selectAll('line').data(y.ticks(5)).join('line').attr('x1',m.l).attr('x2',W-m.r).attr('y1',d=>y(d)).attr('y2',d=>y(d));
+  s.append('g').attr('class','axis').attr('transform',`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format('.0%')).tickSize(4));
+  s.append('g').attr('class','axis').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('.0%')).tickSize(4));
+  s.append('text').attr('class','lbl').attr('x',W-m.r).attr('y',H-6).attr('text-anchor','end').text('явка на участке');
+  s.append('text').attr('class','lbl').attr('transform',`translate(12,${m.t+4}) rotate(-90)`).attr('text-anchor','end').text('доля ЕР');
+  const selUs = selectedUiks(list), selSet = selUs ? new Set(selUs) : null;
+  const inSel = u => !!(selSet && selSet.has(u));
+  const pts = [...list].sort((a,b)=> inSel(a)-inSel(b) || a.anoms.length-b.anoms.length || (S.hit===a)-(S.hit===b));
+  s.append('g').selectAll('circle').data(pts).join('circle')
+    .attr('cx',u=>x(u.turnout)).attr('cy',u=>y(u.erPct))
+    .attr('r', u=> S.hit===u ? 6 : inSel(u) ? 3.8 : u.anoms.length ? 3.4 : 2.6)
+    .attr('fill', u=> S.hit===u || inSel(u) ? 'var(--fg)' : 'var(--fg-3)')
+    .attr('fill-opacity', u=> S.hit===u || inSel(u) ? .9 : u.anoms.length ? .8 : (selSet ? .12 : .32))
+    .attr('stroke', u=> S.hit===u ? 'var(--surface)' : u.anoms.length ? 'var(--fg)' : 'none')
+    .attr('stroke-width', u=> S.hit===u ? 2 : 1.3)
+    .style('pointer-events','none');
+  // nearest-point hover: small dots are hard to hit, so the whole plot answers within 24px
+  const px = u=>x(u.turnout), py = u=>y(u.erPct);
+  const dl = d3.Delaunay.from(pts, px, py);
+  const ring = s.append('circle').attr('r',7).attr('fill','none').attr('stroke','var(--fg)').attr('stroke-width',1.5).style('pointer-events','none').style('opacity',0);
+  const near = e=>{ const [mx,my] = d3.pointer(e, s.node()); const i = dl.find(mx,my); const u = pts[i]; return u && Math.hypot(px(u)-mx, py(u)-my) <= 24 ? u : null; };
+  s.append('rect').attr('x',m.l).attr('y',m.t).attr('width',W-m.l-m.r).attr('height',H-m.t-m.b).attr('fill','transparent').style('cursor','crosshair')
+    .on('mousemove', e=>{ const u = near(e); if(!u){ ring.style('opacity',0); hideTip(); return; } ring.attr('cx',px(u)).attr('cy',py(u)).style('opacity',1); showTip(e, dotTip(u)); })
+    .on('mouseleave', ()=>{ ring.style('opacity',0); hideTip(); })
+    .on('click', e=>{ e.stopPropagation(); const u = near(e); if(u) select({type:BL(), key: BL()==='regions'? u.region : String(u.o)}, S.hit===u?null:u); });
+  document.getElementById('legScatter').innerHTML = `<span><i style="background:var(--fg-3);opacity:.6"></i>участок</span><span><i class="ring"></i>аномалия по другой партии</span>${selUs?`<span><i style="background:var(--fg)"></i>выбранная территория</span>`:''}`;
+}
+
+// ---- histogram: KPRF votes per UIK, one row per group, split at the group's own mean ----
+function renderHist(){
+  const host = document.getElementById('chHist'), list = filtered();
+  const groups = S.group==='all' ? [33,34] : [+S.group];
+  const W = host.clientWidth||600, rowH = groups.length>1 ? 128 : 236, gap = 22, m = {t:4,r:16,b:30,l:40};
+  const H = m.t + groups.length*rowH + (groups.length-1)*gap + m.b;
+  host.innerHTML='';
+  const s = d3.select(host).append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);
+  const CAP = 500, STEP = 20;
+  const x = d3.scaleLinear().domain([0, CAP]).range([m.l, W-m.r]);
+  const rows = groups.map(g=>{
+    const us = list.filter(u=>u.g===g);
+    const b = d3.range(0, CAP, STEP).map(e=>({x0:e, x1:e+STEP, below:0, above:0, last:e+STEP>=CAP}));
+    for(const u of us){ const i = Math.min(b.length-1, Math.floor(u.kprf/STEP)); if(u.dev<0) b[i].below++; else b[i].above++; }
+    return {g, b, mean:GROUP[g].mean, n:us.length, below:us.filter(u=>u.dev<0).length};
+  });
+  const ymax = d3.max(rows, r=>d3.max(r.b, d=>d.below+d.above))||1;
+  rows.forEach((r,i)=>{
+    const top = m.t + i*(rowH+gap), y = d3.scaleLinear().domain([0,ymax]).nice().range([top+rowH, top+22]);
+    s.append('g').attr('class','grid').selectAll('line').data(y.ticks(3)).join('line').attr('x1',m.l).attr('x2',W-m.r).attr('y1',d=>y(d)).attr('y2',d=>y(d));
+    s.append('g').attr('class','axis').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(3).tickSize(3));
+    const narrow = W<520;
+    s.append('text').attr('class','lbl strong').attr('x',m.l).attr('y',top+11).text(narrow ? `Группа № ${r.g}` : `Группа № ${r.g} · ${GROUP[r.g].leader}`);
+    s.append('text').attr('class','lbl').attr('x',W-m.r).attr('y',top+11).attr('text-anchor','end').text(`${narrow?'ниже':'ниже среднего'} ${fmtNum(r.below)} из ${fmtNum(r.n)}`);
+    const gB = s.append('g');
+    for(const b of r.b){
+      const n = b.below+b.above; if(!n) continue;
+      const bx = x(b.x0)+1, bw = Math.max(1, x(b.x1)-x(b.x0)-2);
+      const yb = y(b.below), ya = y(n);
+      if(b.below) gB.append('rect').attr('x',bx).attr('width',bw).attr('y',yb).attr('height',Math.max(0,y(0)-yb)).attr('fill','var(--div-neg)').attr('rx',1.5);
+      if(b.above) gB.append('rect').attr('x',bx).attr('width',bw).attr('y',ya).attr('height',Math.max(0,yb-ya-(b.below?2:0))).attr('fill','var(--div-pos)').attr('rx',1.5);
+      gB.append('rect').attr('x',x(b.x0)).attr('width',x(b.x1)-x(b.x0)).attr('y',top+18).attr('height',y(0)-top-18).attr('fill','transparent')
+        .on('mousemove',e=>showTip(e, `<b>${b.last?`${b.x0} голосов и больше`:`${b.x0}–${b.x1-1} голосов`}</b><div style="opacity:.75">группа № ${r.g}</div><div class="row"><span>участков</span><span>${n}</span></div>${b.below&&b.above?`<div class="row"><span>ниже среднего</span><span>${b.below}</span></div><div class="row"><span>выше</span><span>${b.above}</span></div>`:''}`))
+        .on('mouseleave',hideTip);
+    }
+    s.append('line').attr('class','mean').attr('x1',x(r.mean)).attr('x2',x(r.mean)).attr('y1',top+18).attr('y2',top+rowH);
+    s.append('text').attr('class','mean-l').attr('x',x(r.mean)+4).attr('y',top+28).text(`среднее ${fmtNum(Math.round(r.mean))}`);
+  });
+  s.append('g').attr('class','axis').attr('transform',`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(W<480?5:10).tickSize(4).tickFormat(d=> d>=CAP ? `${CAP}+` : d));
+  s.append('text').attr('class','lbl').attr('x',W-m.r).attr('y',H-4).attr('text-anchor','end').text('голосов за КПРФ на участке');
+  document.getElementById('legHist').innerHTML = `<span><i class="sq" style="background:var(--div-neg)"></i>ниже среднего своей группы</span><span><i class="sq" style="background:var(--div-pos)"></i>выше среднего</span><span>последний столбик: ${CAP} и больше</span>`;
+}
+
+// ---- paper vs DEG: dumbbell per okrug, one hue in two shades ----
+function renderDeg(){
+  const host = document.getElementById('chDeg');
+  const okr = D.okrugs.features.map(f=>f.properties.num).filter(o=> S.group==='all' || GROUP[+S.group].okrugs.includes(o));
+  const rows = okr.map(o=>{ const us = D.uiks.filter(u=>u.o===o); const a = aggregate(us); const dg = D.deg.find(d=>d.o===o); return {o, name:D.okrug_names[o], g:us[0]?.g, paper:a.val?a.kprf/a.val:0, deg: dg&&dg.val? dg.v[iK]/dg.val:0, degVotes: dg?dg.val:0, paperVotes:a.val}; }).sort((a,b)=>b.paper-a.paper);
+  const W = host.clientWidth||600, rowH = 24;
+  const lab = d=>`${d.o} ${d.name}`;
+  const m = {t:8, r:62, b:30, l: Math.min(W*0.42, 16 + 6.6*d3.max(rows, d=>lab(d).length))};
+  const H = rows.length*rowH + m.t + m.b;
+  host.innerHTML='';
+  const s = d3.select(host).append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);
+  // a dot plot needs no zero baseline: start just below the smallest value so the gaps get the width
+  const lo = Math.max(0, Math.floor((d3.min(rows,r=>Math.min(r.paper,r.deg))-0.02)*20)/20);
+  const x = d3.scaleLinear().domain([lo, Math.max(lo+.1, d3.max(rows,r=>Math.max(r.paper,r.deg))*1.06)]).range([m.l, W-m.r]);
+  s.append('g').attr('class','grid').selectAll('line').data(x.ticks(5)).join('line').attr('y1',m.t).attr('y2',H-m.b).attr('x1',d=>x(d)).attr('x2',d=>x(d));
+  s.append('g').attr('class','axis').attr('transform',`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(W<480?4:6).tickFormat(d3.format('.0%')).tickSize(4));
+  const selO = S.selected && S.selected.type==='okrugs' ? +S.selected.key : null;
+  const g = s.selectAll('g.r').data(rows).join('g').attr('class','r rank-row').classed('sel', d=>d.o===selO).attr('transform',(d,i)=>`translate(0,${m.t+i*rowH+rowH/2})`)
+    .style('cursor','pointer').on('click',(e,d)=>{ if(S.layer!=='okrugs') setLayer('okrugs'); select({type:'okrugs', key:String(d.o)}); })
+    .on('mousemove',(e,d)=>showTip(e, `<b>Округ № ${d.o} · ${d.name}</b><div style="opacity:.75">группа № ${d.g}</div><div class="row"><span>КПРФ на бумаге</span><span>${fmtPct1(d.paper)}</span></div><div class="row"><span>КПРФ в ДЭГ</span><span>${fmtPct1(d.deg)}</span></div><div class="row"><span>Разница</span><span>${fmtPp(d.deg-d.paper)}</span></div><div class="row"><span>Бюллетеней ДЭГ / бумага</span><span>${fmtNum(d.degVotes)} / ${fmtNum(d.paperVotes)}</span></div>`)).on('mouseleave',hideTip);
+  g.append('rect').attr('x',0).attr('y',-rowH/2).attr('width',W).attr('height',rowH).attr('fill','transparent');
+  g.append('text').attr('class','lbl').attr('x',m.l-12).attr('text-anchor','end').attr('dy','.35em').text(lab);
+  g.append('line').attr('x1',d=>x(d.deg)).attr('x2',d=>x(d.paper)).attr('stroke','var(--line)').attr('stroke-width',2);
+  g.append('circle').attr('cx',d=>x(d.deg)).attr('r',5).attr('fill','var(--deg-fill)').attr('stroke','var(--kprf)').attr('stroke-width',1.5);
+  g.append('circle').attr('cx',d=>x(d.paper)).attr('r',5).attr('fill','var(--kprf)').attr('stroke','var(--surface)').attr('stroke-width',1.5);
+  g.append('text').attr('class','val').attr('x',d=>x(Math.max(d.paper,d.deg))+10).attr('dy','.35em').text(d=>fmtPp(d.deg-d.paper));
+  document.getElementById('legDeg').innerHTML = `<span><i style="background:var(--kprf)"></i>бумажные УИК</span><span><i style="background:var(--deg-fill);border:1.5px solid var(--kprf)"></i>ДЭГ</span><span>справа: ДЭГ минус бумага</span>`;
+}
+
+// ---- footer ----
+document.getElementById('foot').innerHTML = `<p><b>Как считается.</b> Проценты: голоса партии к действительным бюллетеням. Среднее КПРФ на участок считается по бумажным УИК своей региональной группы. ДЭГ показан отдельно по округам: по участкам он не публикуется.</p><p><b>Источник.</b> ${D.meta.source}. <a href="${D.meta.source_url}" target="_blank" rel="noopener">Выборотека, город Москва, партийные списки</a>.</p><p><b>Аномалии.</b> ${D.meta.anomaly_rule}</p><p><b>Границы.</b> Районы по OpenStreetMap (данные ODbL). ${D.meta.ao_note} Контуры одномандатных округов собраны объединением районов по привязке участков из протоколов; ни один район не разрезан между округами.</p>${D.meta.coords_note?`<p><b>Точки участков.</b> ${D.meta.coords_note} Цвет точки: партия на первом месте по бумажным бюллетеням этого УИК, без ДЭГ. Несколько участков в одном здании показаны соседними точками вокруг адреса. ${D.uiks.filter(u=>APPROX[u.src]).length} точек стоят приблизительно (улица, посёлок или центр района), они обведены пунктиром.</p>`:''}`;
+
+// ---- controls ----
+function setSeg(id, v){ document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v===v))); }
+document.querySelectorAll('#segGroup button').forEach(b=>b.onclick=()=>{ S.group=b.dataset.v; setSeg('segGroup',S.group); persist(); if(S.hit && S.group!=='all' && S.hit.g!==+S.group) S.hit=null; renderAll(); });
+function syncLayerUI(){
+  setSeg('segLayer',S.layer); setSeg('segDots',S.dots);
+  document.getElementById('ctlDots').hidden = S.layer!=='points';
+  document.getElementById('ctlMetric').hidden = S.layer==='points';
+  svg.classed('pmode', S.layer==='points');
+  document.getElementById('map').setAttribute('aria-label', S.layer==='points' ? 'Карта Москвы: участки, цвет точки показывает партию на первом месте' : S.layer==='regions' ? 'Карта Москвы по районам' : 'Карта Москвы по одномандатным округам');
+  updateDotButtons();
+}
+function setLayer(v){ S.layer=v; S.selected=null; S.hit=null; persist(); syncLayerUI(); computeMap(); drawMap(); renderInspector(); renderRank(); renderScatter(); }
+document.querySelectorAll('#segLayer button').forEach(b=>b.onclick=()=>setLayer(b.dataset.v));
+document.querySelectorAll('#segDots button').forEach(b=>b.onclick=()=>{ S.dots=b.dataset.v; setSeg('segDots',S.dots); persist(); styleDots(); });
+sel.onchange = ()=>{ S.metric = sel.value; persist(); computeMap(); styleMap(); renderRank(); };
+function zoomToUik(u){
+  if(S.layer!=='points' || !u.px) return;
+  const box = svg.node().getBoundingClientRect(), k = Math.max(curK, 7);
+  svg.transition().duration(650).call(zoom.transform, d3.zoomIdentity.translate(box.width/2, box.height/2).scale(k).translate(-u.px[0], -u.px[1]));
+}
+document.getElementById('formUik').onsubmit = e=>{
+  e.preventDefault(); const n = parseInt(document.getElementById('inpUik').value,10); if(!n) return;
+  const found = D.uiks.filter(u=>u.n===n); const inp = document.getElementById('inpUik');
+  if(!found.length){ inp.setCustomValidity('Такого бумажного УИК нет в двух группах'); inp.reportValidity(); setTimeout(()=>inp.setCustomValidity(''),1500); return; }
+  const u = found[0];
+  if(S.group!=='all' && u.g!==+S.group){ S.group='all'; setSeg('segGroup','all'); renderAll(); }
+  if(S.layer==='points' && !dotMatch(u)){ S.dots='all'; setSeg('segDots','all'); persist(); }
+  select({type:BL(), key: BL()==='regions'? u.region : String(u.o)}, u);
+  zoomToUik(u);
+};
+setSeg('segGroup',S.group); syncLayerUI();
+
+function renderAll(){ renderKpis(); updateDotButtons(); computeMap(); drawDots(); styleMap(); renderInspector(); renderRank(); renderScatter(); renderHist(); renderDeg(); }
+let rt; addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(()=>{ fitProjection(); drawMap(); renderRank(); renderScatter(); renderHist(); renderDeg(); },150); });
+
+fitProjection(); computeMap(); drawMap(); renderKpis(); renderInspector(); renderRank(); renderScatter(); renderHist(); renderDeg();
+})();
+</script>
