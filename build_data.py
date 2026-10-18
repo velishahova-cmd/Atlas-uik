@@ -97,11 +97,6 @@ if NEW:
         uiks.append({'g': g, 'd': row['tik'], 'o': o, 'n': int(row['uik']), 'el': int(row['voters']), 'val': int(row['valid']), 'inv': int(row['invalid']), 'v': votes})
         added += 1
     uiks.sort(key=lambda u: (u['g'], u['d'].lower().replace('район ', '').replace(' район', ''), u['n']))
-    # Missing protocols remain in the source roster but are not observations.
-    # Exclude rows with no electorate or ballots from paper-UIK averages.
-    for gid, gm in group_meta.items():
-        ks = [u['v'][6] for u in uiks if u['g'] == gid and (u['el'] or u['val'] or u['inv'])]
-        gm['mean'] = round(sum(ks) / len(ks), 4)
     # recompute anomalies with the table's rule (population sd)
     anomalies = []
     for gid in group_meta:
@@ -125,6 +120,13 @@ if NEW:
                 elif pname == 'ЕР' and share >= 0.65 and turnout >= 0.55:
                     anomalies.append({'g': gid, 'd': u['d'], 'o_name': okrug_names[u['o']], 'n': u['n'], 'party': full, 'votes': u['v'][pi], 'share': round(share, 4), 'median': round(med, 4), 'z': round(z, 2), 'turnout': round(turnout, 3), 'why': f"ЕР {share*100:.0f}% при явке {turnout*100:.0f}% на бумажном УИК"})
     anomalies.sort(key=lambda a: (a['g'], -a['z']))
+
+# Missing protocols remain in the source roster but are not observations.
+# Recompute averages whether or not the optional new17.csv was provided.
+for gid, gm in group_meta.items():
+    ks = [u['v'][6] for u in uiks if u['g'] == gid and (u['el'] or u['val'] or u['inv'])]
+    gm['mean'] = round(sum(ks) / len(ks), 4) if ks else 0
+if NEW:
     print('added', added, 'means', {k: v['mean'] for k, v in group_meta.items()}, 'anomalies', len(anomalies), file=sys.stderr)
 
 for u in uiks:
