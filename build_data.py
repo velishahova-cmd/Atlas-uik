@@ -97,9 +97,10 @@ if NEW:
         uiks.append({'g': g, 'd': row['tik'], 'o': o, 'n': int(row['uik']), 'el': int(row['voters']), 'val': int(row['valid']), 'inv': int(row['invalid']), 'v': votes})
         added += 1
     uiks.sort(key=lambda u: (u['g'], u['d'].lower().replace('район ', '').replace(' район', ''), u['n']))
-    # recompute group means over paper UIKs
+    # Missing protocols remain in the source roster but are not observations.
+    # Exclude rows with no electorate or ballots from paper-UIK averages.
     for gid, gm in group_meta.items():
-        ks = [u['v'][6] for u in uiks if u['g'] == gid]
+        ks = [u['v'][6] for u in uiks if u['g'] == gid and (u['el'] or u['val'] or u['inv'])]
         gm['mean'] = round(sum(ks) / len(ks), 4)
     # recompute anomalies with the table's rule (population sd)
     anomalies = []

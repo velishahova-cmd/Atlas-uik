@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Атлас УИК Москвы</title>
-<meta name="description" content="Интерактивная карта 1 443 бумажных УИК Москвы, Госдума 2026: районы, одномандатные округа, точки участков с победителем, группы КПРФ № 33 и № 34.">
+<meta name="description" content="Интерактивная карта 1 442 бумажных УИК Москвы с результатами; ещё один участок без протокола. Госдума 2026: районы, округа, группы КПРФ № 33 и № 34.">
 <meta property="og:title" content="Атлас УИК Москвы">
-<meta property="og:description" content="Госдума 2026: 1 443 бумажных участка Москвы на карте. Кто где первый, где КПРФ отстаёт от среднего, бумага против ДЭГ.">
+<meta property="og:description" content="Госдума 2026: 1 442 бумажных УИК Москвы с результатами, один участок без протокола. Кто где первый, бумага против ДЭГ.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c8313c'/%3E%3Ccircle cx='11' cy='12' r='3.2' fill='%23fff'/%3E%3Ccircle cx='21' cy='11' r='2.4' fill='%23fff' opacity='.7'/%3E%3Ccircle cx='15' cy='21' r='3.8' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -244,7 +244,7 @@ table.uik td .d{font-family:var(--font-body);color:var(--fg-3);font-size:11px;di
     <div>
       <div class="eyebrow">Госдума 2026 · федеральный список · бумажные УИК Москвы</div>
       <h1>Атлас УИК Москвы</h1>
-      <div class="sub">1 443 участка по 132 районам и 16 одномандатным округам. Региональные группы КПРФ № 33 и № 34: где КПРФ первая по бумажным бюллетеням, где участки отстают от среднего по группе и где по другим партиям статистика выбивается.</div>
+      <div class="sub">1 442 участка с результатами по 132 районам и 16 одномандатным округам; ещё один УИК без данных протокола. Региональные группы КПРФ № 33 и № 34: где КПРФ первая по бумажным бюллетеням, где участки отстают от среднего по группе и где по другим партиям статистика выбивается.</div>
     </div>
   </header>
 
@@ -320,6 +320,14 @@ if(!D){ document.getElementById('kpis').innerHTML = '<div class="notice">Фай�
 const P = D.meta.parties, PI = Object.fromEntries(P.map((p,i)=>[p,i]));
 const iK = PI['КПРФ'], iER = PI['ЕР'], iL = PI['ЛДПР'];
 const GROUP = Object.fromEntries(D.groups.map(g=>[g.id,g]));
+const hasProtocol = u => u.el !== 0 || u.val !== 0 || u.inv !== 0;
+const measuredUiks = D.uiks.filter(hasProtocol);
+const missingUiks = D.uiks.filter(u=>!hasProtocol(u));
+// data.js keeps the full roster; calculate means from rows with actual results.
+for(const g of D.groups){
+  const us = measuredUiks.filter(u=>u.g===g.id);
+  g.mean = us.length ? d3.mean(us,u=>u.v[iK]) : 0;
+}
 const groupColor = g => g==33 ? 'var(--g33)' : 'var(--g34)';
 const fmtInt = d3.format(',.0f'), fmtPct1 = v => (v*100).toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
 const fmtNum = v => Number(v).toLocaleString('ru-RU');
@@ -347,7 +355,7 @@ for(const u of D.uiks){
 const kWin = u => u.wcat==='kprf';
 const shortP = i => P[i]==='ЕР' ? 'ЕР' : P[i];
 // several UIKs often share one school: spread them around the building point
-for(const us of d3.group(D.uiks.filter(u=>u.ll), u=>u.ll.join(',')).values()){
+for(const us of d3.group(measuredUiks.filter(u=>u.ll), u=>u.ll.join(',')).values()){
   us.sort((a,b)=>a.n-b.n);
   us.forEach((u,i)=>{ const n=us.length; if(n===1){ u.off=[0,0]; return; } const ang = -Math.PI/2 + 2*Math.PI*i/n; u.off=[Math.cos(ang), Math.sin(ang)]; });
 }
@@ -385,7 +393,7 @@ const isKFirst = u => u.wcat==='kprf' || (u.tie && u.tiedWith.includes(iK));
 const isClose = u => u.val>0 && u.margin < CLOSE;
 const dotMatch = u => S.dots==='all' ? true : S.dots==='kprf' ? isKFirst(u) : S.dots==='close' ? isClose(u) : (isKFirst(u) || isClose(u));
 
-function filtered(){ return S.group==='all' ? D.uiks : D.uiks.filter(u=>u.g==+S.group); }
+function filtered(){ return S.group==='all' ? measuredUiks : measuredUiks.filter(u=>u.g==+S.group); }
 function aggregate(list){
   const a = {n:0, el:0, val:0, inv:0, kprf:0, er:0, ldpr:0, below:0, above:0, anoms:0, votes:P.map(()=>0), meanRefSum:0, groups:new Set()};
   for(const u of list){
@@ -836,7 +844,7 @@ function renderHist(){
 function renderDeg(){
   const host = document.getElementById('chDeg');
   const okr = D.okrugs.features.map(f=>f.properties.num).filter(o=> S.group==='all' || GROUP[+S.group].okrugs.includes(o));
-  const rows = okr.map(o=>{ const us = D.uiks.filter(u=>u.o===o); const a = aggregate(us); const dg = D.deg.find(d=>d.o===o); return {o, name:D.okrug_names[o], g:us[0]?.g, paper:a.val?a.kprf/a.val:0, deg: dg&&dg.val? dg.v[iK]/dg.val:0, degVotes: dg?dg.val:0, paperVotes:a.val}; }).sort((a,b)=>b.paper-a.paper);
+  const rows = okr.map(o=>{ const us = measuredUiks.filter(u=>u.o===o); const a = aggregate(us); const dg = D.deg.find(d=>d.o===o); return {o, name:D.okrug_names[o], g:us[0]?.g, paper:a.val?a.kprf/a.val:0, deg: dg&&dg.val? dg.v[iK]/dg.val:0, degVotes: dg?dg.val:0, paperVotes:a.val}; }).sort((a,b)=>b.paper-a.paper);
   const W = host.clientWidth||600, rowH = 24;
   const lab = d=>`${d.o} ${d.name}`;
   const m = {t:8, r:62, b:30, l: Math.min(W*0.42, 16 + 6.6*d3.max(rows, d=>lab(d).length))};
@@ -862,7 +870,7 @@ function renderDeg(){
 }
 
 // ---- footer ----
-document.getElementById('foot').innerHTML = `<p><b>Как считается.</b> Проценты: голоса партии к действительным бюллетеням. Среднее КПРФ на участок считается по бумажным УИК своей региональной группы. ДЭГ показан отдельно по округам: по участкам он не публикуется.</p><p><b>Источник.</b> ${D.meta.source}. <a href="${D.meta.source_url}" target="_blank" rel="noopener">Выборотека, город Москва, партийные списки</a>.</p><p><b>Аномалии.</b> ${D.meta.anomaly_rule}</p><p><b>Границы.</b> Районы по OpenStreetMap (данные ODbL). ${D.meta.ao_note} Контуры одномандатных округов собраны объединением районов по привязке участков из протоколов; ни один район не разрезан между округами.</p>${D.meta.coords_note?`<p><b>Точки участков.</b> ${D.meta.coords_note} Цвет точки: партия на первом месте по бумажным бюллетеням этого УИК, без ДЭГ. Несколько участков в одном здании показаны соседними точками вокруг адреса. ${D.uiks.filter(u=>APPROX[u.src]).length} точек стоят приблизительно (улица, посёлок или центр района), они обведены пунктиром.</p>`:''}`;
+document.getElementById('foot').innerHTML = `<p><b>Как считается.</b> Проценты: голоса партии к действительным бюллетеням. Среднее КПРФ на участок считается по бумажным УИК своей региональной группы. ${missingUiks.length?'Строки без данных протокола исключены из показателей и карты. ':''}ДЭГ показан отдельно по округам: по участкам он не публикуется.</p><p><b>Источник.</b> ${D.meta.source}. <a href="${D.meta.source_url}" target="_blank" rel="noopener">Выборотека, город Москва, партийные списки</a>.</p><p><b>Аномалии.</b> ${D.meta.anomaly_rule}</p><p><b>Границы.</b> Районы по OpenStreetMap (данные ODbL). ${D.meta.ao_note} Контуры одномандатных округов собраны объединением районов по привязке участков из протоколов; ни один район не разрезан между округами.</p>${D.meta.coords_note?`<p><b>Точки участков.</b> ${D.meta.coords_note} Цвет точки: партия на первом месте по бумажным бюллетеням этого УИК, без ДЭГ. Несколько участков в одном здании показаны соседними точками вокруг адреса. ${measuredUiks.filter(u=>APPROX[u.src]).length} точек стоят приблизительно (улица, посёлок или центр района), они обведены пунктиром.</p>`:''}`;
 
 // ---- controls ----
 function setSeg(id, v){ document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v===v))); }
@@ -889,6 +897,7 @@ document.getElementById('formUik').onsubmit = e=>{
   const found = D.uiks.filter(u=>u.n===n); const inp = document.getElementById('inpUik');
   if(!found.length){ inp.setCustomValidity('Такого бумажного УИК нет в двух группах'); inp.reportValidity(); setTimeout(()=>inp.setCustomValidity(''),1500); return; }
   const u = found[0];
+  if(!hasProtocol(u)){ inp.setCustomValidity('УИК есть в базе, но данные протокола пока отсутствуют'); inp.reportValidity(); setTimeout(()=>inp.setCustomValidity(''),2500); return; }
   if(S.group!=='all' && u.g!==+S.group){ S.group='all'; setSeg('segGroup','all'); renderAll(); }
   if(S.layer==='points' && !dotMatch(u)){ S.dots='all'; setSeg('segDots','all'); persist(); }
   select({type:BL(), key: BL()==='regions'? u.region : String(u.o)}, u);
