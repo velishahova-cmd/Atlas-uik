@@ -416,7 +416,7 @@ function renderKpis(){
     {l:'КПРФ на бумаге', v:fmtPct1(a.val?a.kprf/a.val:0), d:`${fmtNum(a.kprf)} голосов. В ДЭГ ${fmtPct1(degV?degK/degV:0)}`, red:true},
     {l:'КПРФ на первом месте', v:fmtNum(winDistricts(list)), s:`районов из ${fmtNum(regionsIn(list))}`, d:`${fmtNum(list.filter(kWin).length)} участков${tied?`, ещё ${tied} вничью`:''}`, red:true},
     {l:'Голосов КПРФ на участок', v:meanTxt, d:S.group==='all'?'в среднем, группа № 33 / № 34':`в среднем по группе № ${S.group}`},
-    {l:'Ниже среднего группы', v:fmtNum(a.below), s:`из ${fmtNum(a.n)} УИК`, d:`${fmtPct1(a.n?a.below/a.n:0)} участков отстают`},
+    {l:'Меньше голосов, чем в среднем по группе', v:fmtNum(a.below), s:`из ${fmtNum(a.n)} УИК`, d:`${fmtPct1(a.n?a.below/a.n:0)} участков. Считается по числу голосов, не по доле: на маленьких участках, например в Новой Москве, голосов меньше даже при высокой доле`},
     {l:'Аномалии по другим партиям', v:fmtNum(a.anoms), d:'статистические выбросы, не вывод о нарушениях'},
   ];
   document.getElementById('kpis').innerHTML = items.map(k=>`<div class="kpi${k.red?' k-red':''}"><div class="eyebrow">${k.l}</div><div class="v">${k.v}${k.s?`<small>${k.s}</small>`:''}</div><div class="d">${k.d}</div></div>`).join('');
