@@ -1,11 +1,15 @@
 """Собирает data.js для «Атласа УИК Москвы».
 
-python build_data.py ТАБЛИЦА.xlsx Москва_Moscow.geojson data.js [new17.csv] [uik_coords.csv]
+python build_data.py ТАБЛИЦА.xlsx Москва_Moscow.geojson data.js [new17.csv] [uik_coords.csv] [moscow_2024_patch.geojson]
 
 new17.csv      участки, появившиеся в источнике после снимка таблицы (разделитель ;)
 uik_coords.csv координаты УИК: n;lat;lon;src;locality;street;house;inst
                src: m Мосгоризбирком (здание), o OpenStreetMap (здание),
                     r улица, p населённый пункт или микрорайон, d адреса нет (точка в центре района)
+moscow_2024_patch.geojson
+               районы в границах 2024 года: восемь районов Новой Москвы, а также Солнцево
+               и Ново-Переделкино, к которым отошла территория к югу от них из старого контура НАО.
+               Заменяют одноимённые контуры основного GeoJSON и контуры двух административных округов.
 """
 import json, re, sys, collections, csv
 import statistics as st
@@ -25,7 +29,8 @@ XLSX = sys.argv[1]
 GEO = sys.argv[2]
 OUT = sys.argv[3]
 NEW = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] not in ('', '-') else None
-COORDS = sys.argv[5] if len(sys.argv) > 5 else None
+COORDS = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] not in ('', '-') else None
+PATCH = sys.argv[6] if len(sys.argv) > 6 else None
 
 wb = openpyxl.load_workbook(XLSX, data_only=True)
 
@@ -38,12 +43,12 @@ VOTE_COLS = [9, 11, 13, 15, 17, 19, 21, 23, 25, 27]
 
 GROUPS = {'РГ 33 КПРФ': {'id': 33, 'leader': 'Кумин В. В.'}, 'РГ 34 КПРФ': {'id': 34, 'leader': 'Царихин В. А.'}}
 
-# New Moscow aggregation: 2024 districts -> OSM administrative okrug polygons
+# Without the 2024 patch, New Moscow falls back to the pre-reform OSM polygons of two okrugs
 AO_MAP = {
     'Новомосковский административный округ': ['район Коммунарка', 'район Филимонковский', 'район Щербинка'],
     'Троицкий административный округ': ['район Троицк', 'район Краснопахорский', 'район Вороново', 'район Бекасово'],
 }
-DISTRICT_TO_AO = {d: ao for ao, ds in AO_MAP.items() for d in ds}
+DISTRICT_TO_AO = {} if PATCH else {d: ao for ao, ds in AO_MAP.items() for d in ds}
 
 
 def norm(s):
@@ -154,11 +159,53 @@ for a in anomalies:
 # districts keep exactly shared edges: no slivers or overlaps between them, and okrug lines,
 # built as unions of the same simplified districts, sit exactly on district borders.
 import shapely
+
+
+def polys(g):
+    g = shapely.make_valid(g)
+    if g.geom_type == 'GeometryCollection':
+        g = unary_union([p for p in g.geoms if p.geom_type in ('Polygon', 'MultiPolygon')])
+    return g
+
+
 geo = json.load(open(GEO, encoding='utf-8'))
-cov_names = [f['properties']['district'] for f in geo['features']]
+base = [(f['properties']['district'], polys(shape(f['geometry']))) for f in geo['features']]
+new_moscow = set()
+if PATCH:
+    # 2024 boundaries take precedence. The old okrug contours are dropped, same-named districts
+    # are replaced, and other districts lose whatever the new contours cover. Where the new
+    # contours leave a gap inside the area they replace, the gap goes to the neighbour with the
+    # longest shared border.
+    patch = [(f['properties']['district'], polys(shape(f['geometry'])), f['properties'].get('new_moscow')) for f in json.load(open(PATCH, encoding='utf-8'))['features']]
+    new_moscow = {norm(n) for n, _, nmf in patch if nmf}
+    pnames = {norm(n) for n, _, _ in patch}
+    gone = [g for n, g in base if n in AO_MAP or norm(n) in pnames]
+    pu = unary_union([g for _, g, _ in patch])
+    items, crumbs = [(n, g) for n, g, _ in patch], []
+    for n, g in base:
+        if n in AO_MAP or norm(n) in pnames:
+            continue
+        if g.intersects(pu):
+            g = polys(g.difference(pu))
+            if hasattr(g, 'geoms'):   # crumbs left by the cut are treated as gap
+                big = max(p.area for p in g.geoms)
+                crumbs += [p for p in g.geoms if p.area < 0.01 * big]
+                g = unary_union([p for p in g.geoms if p.area >= 0.01 * big])
+        items.append((n, g))
+    gap = polys(unary_union(gone + crumbs).difference(unary_union([g for _, g in items])))
+    extra = collections.defaultdict(list)
+    for piece in (gap.geoms if hasattr(gap, 'geoms') else [gap]):
+        if piece.is_empty or piece.area < 1e-12:
+            continue
+        b, zone = piece.boundary, piece.buffer(1e-5)
+        best = max((it for it in items if it[1].intersects(zone)), key=lambda it: b.intersection(it[1].buffer(1e-6)).length, default=None)
+        if best:
+            extra[best[0]].append(piece)
+    base = [(n, polys(unary_union([g] + extra[n])) if extra[n] else g) for n, g in items]
+    print('patch', len(patch), 'gap pieces', sum(len(v) for v in extra.values()), 'largest %.2f km2 -> %s' % max(((p.area * 7011, n) for n, v in extra.items() for p in v), default=(0, '-')), file=sys.stderr)
+cov_names = [n for n, _ in base]
 cov, acc = [], None
-for f in geo['features']:
-    g = shapely.make_valid(shape(f['geometry']))
+for _, g in base:
     if acc is not None:
         g = shapely.make_valid(g.difference(acc))   # OSM has a few square metres of overlap; give them to the first owner
     if g.geom_type == 'GeometryCollection':
@@ -166,6 +213,7 @@ for f in geo['features']:
     cov.append(g)
     acc = g if acc is None else unary_union([acc, g])
 cov = list(shapely.coverage_simplify(cov, 0.0003))
+cov = list(shapely.set_precision(cov, 1e-5))   # snap to the 5-decimal grid used in data.js without creating self-intersections
 gn = {norm(n): fix_orient(g) for n, g in zip(cov_names, cov)}
 region_names = sorted({d['region'] for d in districts})
 regions = []
@@ -177,8 +225,10 @@ for rn in region_names:
         continue
     region_shapes[rn] = shp
     parts = AO_MAP.get(rn, [rn])
-    regions.append({'type': 'Feature', 'properties': {'name': rn, 'parts': parts, 'o': dist[parts[0]]['o'], 'g': dist[parts[0]]['g']},
-                    'geometry': mapping(shp)})
+    props = {'name': rn, 'parts': parts, 'o': dist[parts[0]]['o'], 'g': dist[parts[0]]['g']}
+    if rn in AO_MAP or norm(rn) in new_moscow:
+        props['nm'] = 1   # New Moscow: kept out of the initial map frame
+    regions.append({'type': 'Feature', 'properties': props, 'geometry': mapping(shp)})
 
 # okrug polygons = union of the simplified regions, no further simplification
 okrugs = []
@@ -281,7 +331,8 @@ data = {
         'source_url': 'https://www.vyboroteka.org/2026/2026-09-20/ordered/gorod-moskva?kind=gosduma&contest=party_list',
         'parties': PARTIES, 'party_full': PARTY_FULL,
         'anomaly_rule': 'Среди бумажных УИК района (если их меньше 8, то округа) доля партии имеет z ≥ 2,5 и минимум на 12 п.п. выше медианы, при доле не ниже 40% и не меньше 30 действительных бюллетеней. Отдельно отмечается ЕР от 65% при явке бумажного УИК от 55%. Это статистические выбросы, не заключение о фальсификации.',
-        'ao_note': 'Семь районов Новой Москвы 2024 года (Коммунарка, Филимонковский, Щербинка; Троицк, Краснопахорский, Вороново, Бекасово) показаны двумя контурами административных округов: отдельных границ в открытых данных пока нет.',
+        'ao_note': ('Новая Москва, Солнцево и Ново-Переделкино показаны в границах районов 2024 года (OpenStreetMap, снимок 2026-11-06).' if PATCH else
+                    'Семь районов Новой Москвы 2024 года (Коммунарка, Филимонковский, Щербинка; Троицк, Краснопахорский, Вороново, Бекасово) показаны двумя контурами административных округов: отдельных границ в открытых данных пока нет.'),
         'coords_note': ('Адреса и координаты помещений: сервис поиска УИК Мосгоризбиркома (mosgorizbirkom.ru), снимок 2026-10-15. '
                         'Где у сервиса нет координат, адрес найден в OpenStreetMap через Nominatim (данные ODbL); '
                         'каждая такая точка сверена обратным геокодированием и попаданием в свой район.') if COORDS else '',

@@ -475,8 +475,8 @@ function computeMap(){
 
 function fitProjection(){
   const box = svg.node().getBoundingClientRect();
-  // fit to the districts inside the ring road and Zelenograd; the two large New Moscow okrugs hang below the frame and are reached by zooming out
-  const core = {type:'FeatureCollection', features: D.regions.features.filter(f=>f.properties.parts.length===1)};
+  // fit to old Moscow and Zelenograd; New Moscow districts (flag nm) hang below the frame and are reached by zooming out
+  const core = {type:'FeatureCollection', features: D.regions.features.filter(f=>!f.properties.nm && f.properties.parts.length===1)};
   projection.fitExtent([[14,14],[box.width-14,box.height-14]], core);
   dotBase = Math.max(.5, Math.min(1, box.width/880));
 }
