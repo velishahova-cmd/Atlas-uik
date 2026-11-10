@@ -144,6 +144,8 @@ svg.pmode .okrug-label{opacity:.6}
 .gchip i{width:7px;height:7px;border-radius:50%;display:inline-block}
 .insp-h .clear{float:right;border:0;background:transparent;color:var(--fg-3);cursor:pointer;font-size:12px;padding:2px 4px}
 .insp-h .clear:hover{color:var(--fg)}
+.insp-h .aobtn{background:var(--surface-2);cursor:pointer;font-family:inherit;color:var(--fg)}
+.insp-h .aobtn:hover{border-color:var(--fg-2)}
 .insp-b{overflow:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:14px;min-height:0}
 .facts{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
 .fact .l{font-size:11px;color:var(--fg-3);letter-spacing:.04em;text-transform:uppercase}
@@ -364,6 +366,8 @@ for(const a of D.anomalies){
   const u = uikIndex.get(a.g+':'+a.n); if(u){ u.anoms.push(a); a.u = u; }
 }
 const regionDistricts = d3.group(D.districts, d=>d.region);
+// ТАО в целом: сводная карточка четырёх районов Троицкого административного округа
+const TAO = {key:'Троицкий административный округ', parts:['район Троицк','район Краснопахорский','район Вороново','район Бекасово']};
 
 // ---- metrics ----
 const METRICS = {
@@ -588,7 +592,7 @@ function styleMap(){
   gFill.selectAll('path.region')
     .attr('fill', f=>{ const a = mapAgg.get(featKey(f)); return (S.layer==='points' || !a || a.n===0) ? 'var(--surface-2)' : scale.color(a.value); })
     .classed('dim', f=>{ const a = mapAgg.get(featKey(f)); return !a||a.n===0; })
-    .classed('selected', f=> S.selected && S.selected.type===BL() && S.selected.key===featKey(f));
+    .classed('selected', f=> S.selected && (S.selected.type===BL() && S.selected.key===featKey(f) || S.selected.type==='ao' && BL()==='regions' && TAO.parts.includes(featKey(f))));
   gFill.selectAll('path.region.selected').raise();
   document.getElementById('mapTitle').textContent = S.layer==='points' ? 'Участки · кто первый на бумажном УИК' : (S.layer==='regions'?'Районы Москвы':'Одномандатные округа') + ' · ' + m.label;
   document.getElementById('mapNote').textContent = S.layer==='points'
@@ -645,6 +649,7 @@ function select(s, hit){
 function selectedUiks(list){
   if(!S.selected) return null;
   if(S.selected.type==='regions') return list.filter(u=>u.region===S.selected.key);
+  if(S.selected.type==='ao') return list.filter(u=>TAO.parts.includes(u.region));
   return list.filter(u=>u.o===+S.selected.key);
 }
 function partyBars(a){
@@ -682,16 +687,18 @@ function renderInspector(){
     return;
   }
   const a = aggregate(us);
-  const isR = S.selected.type==='regions';
-  const f = isR ? D.regions.features.find(x=>x.properties.name===S.selected.key) : D.okrugs.features.find(x=>x.properties.num===+S.selected.key);
+  const isAO = S.selected.type==='ao';
+  const isR = S.selected.type==='regions' || isAO;
+  const f = isAO ? {properties:{...D.regions.features.find(x=>x.properties.name===TAO.parts[0]).properties, parts:TAO.parts}}
+    : isR ? D.regions.features.find(x=>x.properties.name===S.selected.key) : D.okrugs.features.find(x=>x.properties.num===+S.selected.key);
   const title = isR ? S.selected.key : `Округ № ${S.selected.key}`;
   const crumbs = isR
-    ? `<span>округ № ${f.properties.o} · ${D.okrug_names[f.properties.o]}</span><span class="gchip"><i style="background:${groupColor(f.properties.g)}"></i>группа № ${f.properties.g}</span>${f.properties.parts.length>1?`<span>${f.properties.parts.join(', ')}</span>`:''}`
+    ? `<span>округ № ${f.properties.o} · ${D.okrug_names[f.properties.o]}</span><span class="gchip"><i style="background:${groupColor(f.properties.g)}"></i>группа № ${f.properties.g}</span>${f.properties.parts.length>1?`<span>${f.properties.parts.join(', ')}</span>`:''}${!isAO && TAO.parts.includes(S.selected.key)?`<button class="gchip aobtn" id="btnAo">ТАО в целом</button>`:''}`
     : `<span>${f.properties.name}</span><span class="gchip"><i style="background:${groupColor(f.properties.g)}"></i>группа № ${f.properties.g}</span><span>${new Set(us.map(u=>u.di)).size} районов</span>`;
   const mean = a.meanRef;
   const devAvg = a.kprfAvg - mean;
   const anoms = us.flatMap(u=>u.anoms).sort((x,y)=>y.z-x.z);
-  el.innerHTML = `<div class="insp-h"><button class="clear" id="btnClear">✕ сбросить</button><div class="eyebrow">${isR?'Район':'Одномандатный округ'}</div><div class="title">${title}</div><div class="crumbs">${crumbs}</div></div>
+  el.innerHTML = `<div class="insp-h"><button class="clear" id="btnClear">✕ сбросить</button><div class="eyebrow">${isAO?'Административный округ':isR?'Район':'Одномандатный округ'}</div><div class="title">${title}</div><div class="crumbs">${crumbs}</div></div>
   <div class="insp-b">
     ${a.n===0?`<div class="notice">В выбранной группе здесь нет участков. Переключите группу на «Обе».</div>`:`
     <div class="facts">
@@ -709,6 +716,7 @@ function renderInspector(){
     <div><div class="sect">Аномалии по другим партиям <span class="note">${anoms.length?anoms.length+' отмечено':''}</span></div>${anoms.length?anomList(anoms):'<div class="empty">Не отмечено.</div>'}</div>`}
   </div>`;
   document.getElementById('btnClear').onclick = ()=>select(null);
+  const ao = document.getElementById('btnAo'); if(ao) ao.onclick = ()=>select({type:'ao', key:TAO.key});
   bindTable(us);
   const hit = el.querySelector('tr.hit'); if(hit) hit.scrollIntoView({block:'center'});
 }
